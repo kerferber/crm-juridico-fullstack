@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CRM Jurídico</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              primary: {
+                DEFAULT: '#2563EB',
+                foreground: '#F1F5F9',
+              },
+              secondary: {
+                DEFAULT: '#10B981',
+                foreground: '#F1F5F9',
+              },
+              background: '#F1F5F9',
+              foreground: '#0F172A',
+              card: '#FFFFFF',
+              'card-foreground': '#0F172A',
+              muted: '#64748B',
+              'muted-foreground': '#64748B',
+              border: '#E2E8F0',
+              input: '#E2E8F0',
+              ring: '#2563EB',
+
+              dark: {
+                primary: {
+                  DEFAULT: '#2563EB',
+                  foreground: '#F1F5F9',
+                },
+                secondary: {
+                  DEFAULT: '#10B981',
+                  foreground: '#F1F5F9',
+                },
+                background: '#020617',
+                foreground: '#F1F5F9',
+                card: '#0F172A',
+                'card-foreground': '#F1F5F9',
+                muted: '#475569',
+                'muted-foreground': '#F1F5F9',
+                border: '#1E293B',
+                input: '#1E293B',
+                ring: '#2563EB',
+              }
+            },
+            borderRadius: {
+              '2xl': '1rem',
+              lg: '0.5rem',
+            }
+          }
+        }
+      }
+    </script>
+  <script type="importmap">
+{
+  "imports": {
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react-router-dom": "https://aistudiocdn.com/react-router-dom@^7.9.4",
+    "recharts": "https://aistudiocdn.com/recharts@^3.2.1",
+    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.545.0",
+    "tailwind-merge": "https://aistudiocdn.com/tailwind-merge@^3.3.1",
+    "clsx": "https://aistudiocdn.com/clsx@^2.1.1",
+    "class-variance-authority": "https://aistudiocdn.com/class-variance-authority@^0.7.1",
+    "dayjs/": "https://aistudiocdn.com/dayjs@^1.11.18/",
+    "dayjs": "https://aistudiocdn.com/dayjs@^1.11.18"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body class="bg-background text-foreground">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,77 @@
+
+import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
+import { useApp } from '../store/AppContext';
+import { formatCurrency, formatDate } from '../lib/utils';
+import { Button } from '../components/ui/Button';
+import { Plus, Minus, ArrowRightLeft } from 'lucide-react';
+import { TransactionType } from '../types/types';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import dayjs from 'dayjs';
+
+const Financial: React.FC = () => {
+    const { transactions } = useApp();
+
+    const chartData = Array.from({ length: 6 }).map((_, i) => {
+        const month = dayjs().subtract(5 - i, 'month');
+        const monthTransactions = transactions.filter(t => dayjs(t.date).isSame(month, 'month'));
+        const receitas = monthTransactions.filter(t => t.type === TransactionType.Receita).reduce((sum, t) => sum + t.value, 0);
+        const despesas = monthTransactions.filter(t => t.type === TransactionType.Despesa).reduce((sum, t) => sum + t.value, 0);
+        return { name: month.format('MMM'), Receitas: receitas, Despesas: despesas };
+    });
+
+    const saldo = transactions.reduce((acc, t) => acc + (t.type === TransactionType.Receita ? t.value : -t.value), 0);
+
+    return (
+        <div className="space-y-6">
+            <div className="flex justify-between items-center">
+                <h1 className="text-2xl font-bold">Financeiro</h1>
+                <div className="space-x-2">
+                    <Button variant="secondary"><Plus className="mr-2 h-4 w-4" /> Nova Receita</Button>
+                    <Button variant="destructive"><Minus className="mr-2 h-4 w-4" /> Nova Despesa</Button>
+                    <Button variant="outline"><ArrowRightLeft className="mr-2 h-4 w-4" /> Transferência</Button>
+                </div>
+            </div>
+
+            <div className="grid gap-6 md:grid-cols-4">
+                 <Card><CardHeader><CardTitle className="text-sm font-medium">Saldo Total</CardTitle></CardHeader><CardContent><p className="text-2xl font-bold">{formatCurrency(saldo)}</p></CardContent></Card>
+                 <Card><CardHeader><CardTitle className="text-sm font-medium">Receita Mensal Prevista</CardTitle></CardHeader><CardContent><p className="text-2xl font-bold">{formatCurrency(15000)}</p></CardContent></Card>
+                 <Card><CardHeader><CardTitle className="text-sm font-medium">Despesa Mensal Prevista</CardTitle></CardHeader><CardContent><p className="text-2xl font-bold">{formatCurrency(8500)}</p></CardContent></Card>
+                 <Card><CardHeader><CardTitle className="text-sm font-medium">Pagamentos Atrasados</CardTitle></CardHeader><CardContent><p className="text-2xl font-bold text-red-500">{formatCurrency(1200)}</p></CardContent></Card>
+            </div>
+            
+            <Card>
+                <CardHeader><CardTitle>Receitas x Despesas por Mês</CardTitle></CardHeader>
+                <CardContent className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={chartData}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="name" />
+                            <YAxis tickFormatter={(value) => formatCurrency(value as number)} />
+                            <Tooltip formatter={(value) => formatCurrency(value as number)} />
+                            <Legend />
+                            <Line type="monotone" dataKey="Receitas" stroke="#10B981" activeDot={{ r: 8 }} />
+                            <Line type="monotone" dataKey="Despesas" stroke="#EF4444" />
+                        </LineChart>
+                    </ResponsiveContainer>
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader><CardTitle>Últimos Lançamentos</CardTitle></CardHeader>
+                <CardContent>
+                    <table className="w-full text-sm">
+                        <thead><tr className="text-left"><th className="p-2">Data</th><th className="p-2">Descrição</th><th className="p-2">Categoria</th><th className="p-2">Conta</th><th className="p-2">Valor</th></tr></thead>
+                        <tbody>
+                            {transactions.slice(0, 10).map(t => (
+                                <tr key={t.id} className="border-b dark:border-dark-border"><td className="p-2">{formatDate(t.date)}</td><td className="p-2">{t.description}</td><td className="p-2">{t.category}</td><td className="p-2">{t.account}</td><td className={`p-2 font-semibold ${t.type === TransactionType.Receita ? 'text-green-600' : 'text-red-600'}`}>{formatCurrency(t.value)}</td></tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </CardContent>
+            </Card>
+        </div>
+    );
+};
+
+export default Financial;

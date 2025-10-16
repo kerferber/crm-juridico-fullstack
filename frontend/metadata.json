@@ -1,0 +1,5 @@
+{
+  "name": "CRM Jurídico",
+  "description": "A comprehensive, frontend-only Legal CRM application featuring an operational dashboard, process pipeline, contact management, tasks, calendar, financial tools, and management reports. Built with React, TypeScript, and Tailwind CSS.",
+  "requestFramePermissions": []
+}

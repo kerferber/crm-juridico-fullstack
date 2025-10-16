@@ -1,0 +1,1 @@
+<?php return ['expiration' => null, 'stateful' => explode(',', env('SANCTUM_STATEFUL_DOMAINS',''))];
