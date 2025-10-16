@@ -8,9 +8,12 @@ export default defineConfig(({ mode }) => {
       server: {
         port: 3000,
         host: '0.0.0.0',
+        allowedHosts: true,
       },
       preview: {
-        allowedHosts: ['crm.fernandokerber.com'],
+        host: '0.0.0.0',
+        port: 4173,
+        allowedHosts: true,
       },
       plugins: [react()],
       define: {
