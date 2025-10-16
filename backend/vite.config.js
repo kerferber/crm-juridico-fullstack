@@ -1,31 +1,26 @@
-// vite.config.js
-import { defineConfig } from 'vite'
-import laravel from 'laravel-vite-plugin'
-import tailwindcss from '@tailwindcss/vite'
+import path from 'path';
+import { defineConfig, loadEnv } from 'vite';
+import react from '@vitejs/plugin-react';
 
-export default defineConfig({
-  plugins: [
-    laravel({
-      input: ['resources/css/app.css', 'resources/js/app.js'],
-      refresh: true,
-    }),
-    tailwindcss(),
-  ],
-
-  // Para desenvolvimento (vite dev) — opcional
-  server: {
-    host: true,        // 0.0.0.0
-    port: 5173,
-    strictPort: true,
-    allowedHosts: ['crm.fernandokerber.com'], // libere seu domínio
-  },
-
-  // Para produção com `vite preview` (o teu caso atrás do Traefik)
-  preview: {
-    host: true,        // 0.0.0.0
-    port: 4173,
-    strictPort: true,
-    allowedHosts: ['crm.fernandokerber.com'], // libere seu domínio
-    // Se preferir liberar geral: allowedHosts: 'all'
-  },
-})
+export default defineConfig(({ mode }) => {
+    const env = loadEnv(mode, '.', '');
+    return {
+      server: {
+        port: 3000,
+        host: '0.0.0.0',
+      },
+      preview: {
+        allowedHosts: ['crm.fernandokerber.com'],
+      },
+      plugins: [react()],
+      define: {
+        'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
+        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
+      },
+      resolve: {
+        alias: {
+          '@': path.resolve(__dirname, '.'),
+        }
+      }
+    };
+});
