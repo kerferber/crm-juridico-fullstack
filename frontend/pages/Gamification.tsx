@@ -139,7 +139,7 @@ const Gamification: React.FC = () => {
             <div className="flex items-center space-x-4">
                 <Trophy className="h-10 w-10 text-yellow-400" />
                 <div>
-                    <h1 className="text-3xl font-bold">Painel de Gamificação</h1>
+                    <h1 className="text-[22px] font-semibold">Painel de Gamificação</h1>
                     <p className="text-muted-foreground">Compita, conquiste e veja sua evolução de performance.</p>
                 </div>
             </div>
@@ -153,9 +153,9 @@ const Gamification: React.FC = () => {
                         <div className="flex justify-between items-end">
                             <div>
                                 <p className="text-lg opacity-80">Nível Atual</p>
-                                <p className="text-4xl font-bold">{currentLevel.name}</p>
+                                <p className="text-[30px] font-semibold">{currentLevel.name}</p>
                             </div>
-                            <p className="text-3xl font-bold">{currentUserScore.toLocaleString()} pts</p>
+                            <p className="text-lg font-semibold">{currentUserScore.toLocaleString()} pts</p>
                         </div>
                         {nextLevel && (
                             <div>

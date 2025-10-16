@@ -33,7 +33,7 @@ const ContactDetail: React.FC = () => {
             <User className="h-8 w-8 text-primary" />
         </div>
         <div>
-            <h1 className="text-3xl font-bold">{contact.name}</h1>
+            <h1 className="text-[22px] font-semibold">{contact.name}</h1>
             <p className="text-muted-foreground">{contact.profession} - {contact.status}</p>
         </div>
       </div>
@@ -55,7 +55,7 @@ const ContactDetail: React.FC = () => {
                   {contactLawsuits.length > 0 ? (
                     <ul className="space-y-2">
                       {contactLawsuits.map(l => (
-                          <li key={l.id} className="p-2 hover:bg-gray-50 dark:hover:bg-dark-border/20 rounded-md">
+                          <li key={l.id} className="rounded-2xl border border-transparent p-2 transition hover:border-border/50 hover:bg-white/70 dark:hover:border-dark-border/60 dark:hover:bg-dark-border/40">
                             <Link to={`/processos/${l.id}`} className="flex justify-between items-center">
                               <div>
                                 <p className="font-medium">{l.internalNumber}</p>
@@ -75,7 +75,7 @@ const ContactDetail: React.FC = () => {
                   {contactTasks.length > 0 ? (
                     <ul className="space-y-2">
                        {contactTasks.map(t => (
-                           <li key={t.id} className="p-2 hover:bg-gray-50 dark:hover:bg-dark-border/20 rounded-md flex justify-between items-center">
+                           <li key={t.id} className="flex items-center justify-between rounded-2xl border border-transparent p-2 transition hover:border-border/50 hover:bg-white/70 dark:hover:border-dark-border/60 dark:hover:bg-dark-border/40">
                                <div>
                                  <p className="font-medium">{t.title}</p>
                                  <p className="text-xs text-muted-foreground">Prazo: {formatDate(t.deadline)}</p>

@@ -21,53 +21,70 @@ import { ThemeProvider } from './hooks/useTheme';
 import CommandPalette from './components/global/CommandPalette';
 import { CommandPaletteProvider } from './hooks/useCommandPalette';
 import { ContactModalProvider } from './hooks/useContactModal';
+import { ProcessModalProvider } from './hooks/useProcessModal';
+import { TaskModalProvider } from './hooks/useTaskModal';
+import { TransactionModalProvider } from './hooks/useTransactionModal';
 import CreateContactModal from './components/contacts/CreateContactModal';
+import CreateLawsuitModal from './components/processes/CreateLawsuitModal';
+import CreateTaskModal from './components/tasks/CreateTaskModal';
+import CreateTransactionModal from './components/financial/CreateTransactionModal';
 
 
 const Layout: React.FC = () => {
-    return (
-        <div className="flex h-screen bg-background text-foreground dark:bg-dark-background dark:text-dark-foreground">
-            <Sidebar />
-            <div className="flex-1 flex flex-col overflow-hidden">
-                <Header />
-                <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 dark:bg-dark-background p-6">
-                    <Outlet />
-                </main>
-            </div>
-        </div>
-    );
+  return (
+    <div className="relative flex h-screen text-foreground dark:text-dark-foreground">
+      <Sidebar />
+      <div className="flex flex-1 flex-col overflow-hidden">
+        <Header />
+        <main className="relative flex-1 overflow-x-hidden overflow-y-auto px-6 py-8 lg:px-10">
+          <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
+            <Outlet />
+          </div>
+        </main>
+      </div>
+    </div>
+  );
 };
 
 
 const App: React.FC = () => {
   return (
     <ThemeProvider defaultTheme="light" storageKey="crm-juridico-theme">
-        <AppProvider>
-            <ContactModalProvider>
+      <AppProvider>
+        <ContactModalProvider>
+          <ProcessModalProvider>
+            <TaskModalProvider>
+              <TransactionModalProvider>
                 <CommandPaletteProvider>
-                    <Router>
-                        <CommandPalette />
-                        <CreateContactModal />
-                        <Routes>
-                            <Route path="/" element={<Layout />}>
-                                <Route index element={<Dashboard />} />
-                                <Route path="crm" element={<CRM />} />
-                                <Route path="contatos" element={<Contacts />} />
-                                <Route path="contatos/:id" element={<ContactDetail />} />
-                                <Route path="processos" element={<Lawsuits />} />
-                                <Route path="processos/:id" element={<LawsuitDetail />} />
-                                <Route path="tarefas" element={<Tasks />} />
-                                <Route path="agenda" element={<Agenda />} />
-                                <Route path="financeiro" element={<Financial />} />
-                                <Route path="gestao" element={<Management />} />
-                                <Route path="gamificacao" element={<Gamification />} />
-                                <Route path="config" element={<Settings />} />
-                            </Route>
-                        </Routes>
-                    </Router>
+                  <Router>
+                    <CommandPalette />
+                    <CreateContactModal />
+                    <CreateLawsuitModal />
+                    <CreateTaskModal />
+                    <CreateTransactionModal />
+                    <Routes>
+                      <Route path="/" element={<Layout />}>
+                        <Route index element={<Dashboard />} />
+                        <Route path="crm" element={<CRM />} />
+                        <Route path="contatos" element={<Contacts />} />
+                        <Route path="contatos/:id" element={<ContactDetail />} />
+                        <Route path="processos" element={<Lawsuits />} />
+                        <Route path="processos/:id" element={<LawsuitDetail />} />
+                        <Route path="tarefas" element={<Tasks />} />
+                        <Route path="agenda" element={<Agenda />} />
+                        <Route path="financeiro" element={<Financial />} />
+                        <Route path="gestao" element={<Management />} />
+                        <Route path="gamificacao" element={<Gamification />} />
+                        <Route path="config" element={<Settings />} />
+                      </Route>
+                    </Routes>
+                  </Router>
                 </CommandPaletteProvider>
-            </ContactModalProvider>
-        </AppProvider>
+              </TransactionModalProvider>
+            </TaskModalProvider>
+          </ProcessModalProvider>
+        </ContactModalProvider>
+      </AppProvider>
     </ThemeProvider>
   );
 };

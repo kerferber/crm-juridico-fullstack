@@ -140,20 +140,27 @@ const CRM: React.FC = () => {
     const filteredCards = kanbanCards.filter(c => c.phase === activeTab);
     
     return (
-        <div className="flex flex-col h-full">
-            <h1 className="text-2xl font-bold mb-4">CRM / Pipeline de Processos</h1>
+        <div className="flex h-full flex-col">
+            <div className="mb-6">
+                <h1 className="text-[22px] font-semibold tracking-tight text-foreground dark:text-dark-foreground">
+                    CRM · Pipeline de Processos
+                </h1>
+                <p className="text-sm text-muted-foreground">
+                    Acompanhe o fluxo dos casos e distribua responsabilidades com fluidez.
+                </p>
+            </div>
             
-            <div className="border-b border-border dark:border-dark-border mb-4">
-                <nav className="-mb-px flex space-x-8" aria-label="Tabs">
+            <div className="mb-6 border-b border-border/60 pb-1 dark:border-dark-border/70">
+                <nav className="-mb-px flex space-x-6 text-sm font-medium text-muted-foreground" aria-label="Tabs">
                     {tabs.map((tab) => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
                             className={cn(
-                                'whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm',
+                                'relative whitespace-nowrap pb-3 transition',
                                 activeTab === tab
-                                    ? 'border-primary text-primary'
-                                    : 'border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300'
+                                    ? 'text-primary after:absolute after:bottom-0 after:left-0 after:h-[3px] after:w-full after:rounded-full after:bg-gradient-to-r after:from-primary after:to-indigo-500'
+                                    : 'after:absolute after:bottom-0 after:left-0 after:h-[3px] after:w-full after:scale-x-0 after:rounded-full after:bg-primary/40 after:transition-transform hover:text-foreground hover:after:scale-x-100'
                             )}
                         >
                             {tab}
@@ -162,22 +169,30 @@ const CRM: React.FC = () => {
                 </nav>
             </div>
 
-            <div className="flex-grow grid grid-cols-5 gap-6">
+            <div className="grid flex-1 grid-cols-5 gap-5">
                 {columns.map(column => (
                     <div 
                         key={column} 
                         className={cn(
-                            "bg-gray-50 dark:bg-dark-border/20 rounded-lg p-4 flex flex-col transition-colors",
+                            'flex flex-col rounded-xl border border-border/50 bg-white p-4 shadow-sm transition-colors dark:border-dark-border/60 dark:bg-dark-card/80',
                             // SUGESTÃO 2: Efeito de highlight na coluna de destino
-                            draggedOverColumn === column && "bg-primary/10 dark:bg-dark-primary/10"
+                            draggedOverColumn === column &&
+                                'border-primary/60 bg-primary/5 shadow-none dark:border-dark-primary/60 dark:bg-dark-primary/10'
                         )}
                         onDrop={(e) => handleDrop(e, column)}
                         onDragOver={handleDragOver}
                         onDragEnter={() => setDraggedOverColumn(column)} // SUGESTÃO 2
                         onDragLeave={() => setDraggedOverColumn(null)}  // SUGESTÃO 2
                     >
-                        <h2 className="font-semibold mb-4">{column} ({filteredCards.filter(c => c.column === column).length})</h2>
-                        <div className="flex-grow overflow-y-auto pr-2 -mr-2">
+                        <h2 className="mb-4 flex items-center justify-between text-sm font-semibold text-muted-foreground">
+                            <span className="uppercase tracking-[0.18em] text-xs text-muted-foreground/80">
+                                {column}
+                            </span>
+                            <span className="rounded-full bg-primary/15 px-2 py-0.5 text-xs font-semibold text-primary dark:bg-dark-primary/15">
+                                {filteredCards.filter(c => c.column === column).length}
+                            </span>
+                        </h2>
+                        <div className="relative -mr-2 flex-grow overflow-y-auto pr-2">
                             {filteredCards.filter(c => c.column === column).map(card => (
                                 <DraggableKanbanCard key={card.id} card={card} users={users} />
                             ))}

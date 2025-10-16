@@ -8,9 +8,11 @@ import { Plus, Minus, ArrowRightLeft } from 'lucide-react';
 import { TransactionType } from '../types/types';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import dayjs from 'dayjs';
+import { useTransactionModal } from '../hooks/useTransactionModal';
 
 const Financial: React.FC = () => {
     const { transactions } = useApp();
+    const { open: openTransactionModal } = useTransactionModal();
 
     const chartData = Array.from({ length: 6 }).map((_, i) => {
         const month = dayjs().subtract(5 - i, 'month');
@@ -25,19 +27,19 @@ const Financial: React.FC = () => {
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
-                <h1 className="text-2xl font-bold">Financeiro</h1>
+                <h1 className="text-[22px] font-semibold">Financeiro</h1>
                 <div className="space-x-2">
-                    <Button variant="secondary"><Plus className="mr-2 h-4 w-4" /> Nova Receita</Button>
-                    <Button variant="destructive"><Minus className="mr-2 h-4 w-4" /> Nova Despesa</Button>
+                    <Button variant="secondary" onClick={() => openTransactionModal(TransactionType.Receita)}><Plus className="mr-2 h-4 w-4" /> Nova Receita</Button>
+                    <Button variant="destructive" onClick={() => openTransactionModal(TransactionType.Despesa)}><Minus className="mr-2 h-4 w-4" /> Nova Despesa</Button>
                     <Button variant="outline"><ArrowRightLeft className="mr-2 h-4 w-4" /> Transferência</Button>
                 </div>
             </div>
 
             <div className="grid gap-6 md:grid-cols-4">
-                 <Card><CardHeader><CardTitle className="text-sm font-medium">Saldo Total</CardTitle></CardHeader><CardContent><p className="text-2xl font-bold">{formatCurrency(saldo)}</p></CardContent></Card>
-                 <Card><CardHeader><CardTitle className="text-sm font-medium">Receita Mensal Prevista</CardTitle></CardHeader><CardContent><p className="text-2xl font-bold">{formatCurrency(15000)}</p></CardContent></Card>
-                 <Card><CardHeader><CardTitle className="text-sm font-medium">Despesa Mensal Prevista</CardTitle></CardHeader><CardContent><p className="text-2xl font-bold">{formatCurrency(8500)}</p></CardContent></Card>
-                 <Card><CardHeader><CardTitle className="text-sm font-medium">Pagamentos Atrasados</CardTitle></CardHeader><CardContent><p className="text-2xl font-bold text-red-500">{formatCurrency(1200)}</p></CardContent></Card>
+                 <Card><CardHeader><CardTitle className="text-sm font-medium">Saldo Total</CardTitle></CardHeader><CardContent><p className="text-lg font-semibold">{formatCurrency(saldo)}</p></CardContent></Card>
+                 <Card><CardHeader><CardTitle className="text-sm font-medium">Receita Mensal Prevista</CardTitle></CardHeader><CardContent><p className="text-lg font-semibold">{formatCurrency(15000)}</p></CardContent></Card>
+                 <Card><CardHeader><CardTitle className="text-sm font-medium">Despesa Mensal Prevista</CardTitle></CardHeader><CardContent><p className="text-lg font-semibold">{formatCurrency(8500)}</p></CardContent></Card>
+                 <Card><CardHeader><CardTitle className="text-sm font-medium">Pagamentos Atrasados</CardTitle></CardHeader><CardContent><p className="text-lg font-semibold text-red-500">{formatCurrency(1200)}</p></CardContent></Card>
             </div>
             
             <Card>

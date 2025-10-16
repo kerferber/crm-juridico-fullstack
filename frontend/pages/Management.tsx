@@ -196,7 +196,7 @@ const Management: React.FC = () => {
     
     return (
         <div className="space-y-6">
-            <h1 className="text-2xl font-bold">Gestão</h1>
+            <h1 className="text-[22px] font-semibold">Gestão</h1>
             <div className="border-b border-border dark:border-dark-border">
                 <nav className="-mb-px flex space-x-8">
                     <button onClick={() => setActiveTab('agilidade')} className={cn('py-4 px-1 border-b-2 font-medium text-sm', activeTab === 'agilidade' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground')}>Agilidade</button>
@@ -222,7 +222,7 @@ const Management: React.FC = () => {
                          <Card>
                             <CardHeader><CardTitle>Tempo Médio de Atraso</CardTitle><CardDescription>Para tarefas concluídas no mês</CardDescription></CardHeader>
                             <CardContent>
-                                <p className="text-3xl font-bold text-red-500">{agilityData.averageDelay.toFixed(1)} dias</p>
+                                <p className="text-2xl font-semibold text-red-500">{agilityData.averageDelay.toFixed(1)} dias</p>
                                 <ComparisonBadge value={agilityData.delayChange} invertColors />
                             </CardContent>
                         </Card>
@@ -259,9 +259,9 @@ const Management: React.FC = () => {
                 <div className="space-y-6">
                     <ExecutiveSummary insights={officeData.insights} />
                     <div className="grid gap-6 lg:grid-cols-3">
-                        <Card><CardHeader><CardTitle className="flex items-center"><TrendingUp className="text-green-500 mr-2"/>Receita (Mês)</CardTitle></CardHeader><CardContent><p className="text-3xl font-bold">{formatCurrency(officeData.totalRevenue)}</p><ComparisonBadge value={officeData.revenueChange} /></CardContent></Card>
-                        <Card><CardHeader><CardTitle className="flex items-center"><TrendingDown className="text-red-500 mr-2"/>Despesa (Mês)</CardTitle></CardHeader><CardContent><p className="text-3xl font-bold">{formatCurrency(officeData.totalExpenses)}</p><ComparisonBadge value={officeData.expensesChange} invertColors /></CardContent></Card>
-                        <Card><CardHeader><CardTitle className="flex items-center"><DollarSign className="text-primary mr-2"/>Lucro Líquido (Mês)</CardTitle></CardHeader><CardContent><p className="text-3xl font-bold">{formatCurrency(officeData.netProfit)}</p><ComparisonBadge value={officeData.profitChange} /></CardContent></Card>
+                        <Card><CardHeader><CardTitle className="flex items-center"><TrendingUp className="text-green-500 mr-2"/>Receita (Mês)</CardTitle></CardHeader><CardContent><p className="text-lg font-semibold">{formatCurrency(officeData.totalRevenue)}</p><ComparisonBadge value={officeData.revenueChange} /></CardContent></Card>
+                        <Card><CardHeader><CardTitle className="flex items-center"><TrendingDown className="text-red-500 mr-2"/>Despesa (Mês)</CardTitle></CardHeader><CardContent><p className="text-lg font-semibold">{formatCurrency(officeData.totalExpenses)}</p><ComparisonBadge value={officeData.expensesChange} invertColors /></CardContent></Card>
+                        <Card><CardHeader><CardTitle className="flex items-center"><DollarSign className="text-primary mr-2"/>Lucro Líquido (Mês)</CardTitle></CardHeader><CardContent><p className="text-lg font-semibold">{formatCurrency(officeData.netProfit)}</p><ComparisonBadge value={officeData.profitChange} /></CardContent></Card>
                     </div>
                     <Card>
                         <CardHeader><CardTitle>Fluxo de Caixa Mensal</CardTitle></CardHeader>

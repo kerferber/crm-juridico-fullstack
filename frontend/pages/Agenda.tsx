@@ -68,32 +68,42 @@ const Agenda: React.FC = () => {
     };
     
     const renderHeader = () => (
-        <div className="flex justify-between items-center flex-wrap gap-4">
-            <div className="flex items-center space-x-4">
-                <h1 className="text-2xl font-bold capitalize">{currentDate.format('MMMM YYYY')}</h1>
-                <div className="flex items-center">
-                    {/* FIX: Corrected the number of arguments for dayjs `subtract` and simplified the logic. */}
+        <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex flex-wrap items-center gap-4">
+                <h1 className="text-[22px] font-semibold capitalize tracking-tight">{currentDate.format('MMMM YYYY')}</h1>
+                <div className="flex items-center gap-2 rounded-full border border-border/60 bg-white/70 px-2 py-1 dark:border-dark-border/60 dark:bg-dark-background/70">
                     <Button variant="ghost" size="icon" onClick={() => setCurrentDate(d => d.subtract(1, view))} aria-label="Anterior">
                         <ChevronLeft className="h-5 w-5" />
                     </Button>
                     <Button variant="outline" onClick={() => setCurrentDate(dayjs())}>Hoje</Button>
-                    {/* FIX: Corrected the number of arguments for dayjs `add` and simplified the logic. */}
                     <Button variant="ghost" size="icon" onClick={() => setCurrentDate(d => d.add(1, view))} aria-label="Próximo">
                         <ChevronRight className="h-5 w-5" />
                     </Button>
                 </div>
-                 {/* --- SUGESTÃO 1: BOTÕES DE VISUALIZAÇÃO --- */}
-                <div className="flex items-center space-x-1 bg-gray-100 dark:bg-dark-border/50 p-1 rounded-lg">
-                    <Button variant={view === 'month' ? 'default' : 'ghost'} size="sm" onClick={() => setView('month')}>Mês</Button>
-                    <Button variant={view === 'week' ? 'default' : 'ghost'} size="sm" onClick={() => setView('week')}>Semana</Button>
-                    <Button variant={view === 'day' ? 'default' : 'ghost'} size="sm" onClick={() => setView('day')}>Dia</Button>
+                 <div className="flex items-center gap-2 rounded-full border border-border/60 bg-white/70 p-1 dark:border-dark-border/60 dark:bg-dark-background/70">
+                    <Button variant={view === 'month' ? 'secondary' : 'ghost'} size="sm" onClick={() => setView('month')}>Mês</Button>
+                    <Button variant={view === 'week' ? 'secondary' : 'ghost'} size="sm" onClick={() => setView('week')}>Semana</Button>
+                    <Button variant={view === 'day' ? 'secondary' : 'ghost'} size="sm" onClick={() => setView('day')}>Dia</Button>
                 </div>
             </div>
             <div className="flex items-center flex-wrap gap-2">
                 {Object.entries(eventTypesConfig).map(([type, { color }]) => (
-                    <Button key={type} onClick={() => handleFilterToggle(type as EventType)} variant={activeFilters.has(type as EventType) ? 'default' : 'outline'} size="sm" style={{'--tw-bg-opacity': 0.2, backgroundColor: activeFilters.has(type as EventType) ? color : 'transparent', borderColor: color, color: activeFilters.has(type as EventType) ? (dayjs().hour() > 18 ? 'white' : 'black') : color}}>
+                    <button
+                        key={type}
+                        onClick={() => handleFilterToggle(type as EventType)}
+                        className={cn(
+                            'rounded-full border px-3.5 py-1.5 text-xs font-semibold tracking-wide transition',
+                            activeFilters.has(type as EventType)
+                                ? 'text-white shadow-[0_12px_25px_-18px_rgba(0,0,0,0.35)]'
+                                : 'bg-transparent text-muted-foreground hover:bg-white/70'
+                        )}
+                        style={{
+                            borderColor: color,
+                            backgroundColor: activeFilters.has(type as EventType) ? color : 'transparent',
+                        }}
+                    >
                         {type}
-                    </Button>
+                    </button>
                 ))}
             </div>
         </div>
@@ -113,8 +123,8 @@ const Agenda: React.FC = () => {
         }
 
         return (
-            <Card className="flex-grow flex flex-col">
-                <div className="grid grid-cols-7 border-b dark:border-dark-border">
+            <Card className="flex flex-1 flex-col border-border/60 bg-white/70 dark:border-dark-border/60 dark:bg-dark-card/70">
+                <div className="grid grid-cols-7 border-b border-border/40 dark:border-dark-border/50">
                     {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map(weekday => (
                         <div key={weekday} className="p-4 text-center text-sm font-medium text-muted-foreground border-r dark:border-dark-border last:border-r-0">{weekday}</div>
                     ))}
@@ -123,7 +133,15 @@ const Agenda: React.FC = () => {
                     {days.map((day, i) => {
                         const dayEvents = filteredEvents.filter(e => e.start.isSame(day, 'day'));
                         return (
-                            <div key={day.format('YYYY-MM-DD')} className={cn("p-2 border-r border-b dark:border-dark-border flex flex-col relative", !day.isSame(currentDate, 'month') && "bg-gray-50 dark:bg-dark-border/20 text-muted-foreground", (i + 1) % 7 === 0 && "border-r-0")}>
+                            <div
+                                key={day.format('YYYY-MM-DD')}
+                                className={cn(
+                                    'relative flex flex-col border-r border-b border-white/40 p-2 dark:border-dark-border/50',
+                                    !day.isSame(currentDate, 'month') &&
+                                        'bg-white/50 text-muted-foreground backdrop-blur-[2px] dark:bg-dark-border/30',
+                                    (i + 1) % 7 === 0 && 'border-r-0'
+                                )}
+                            >
                                 <span className={cn("self-end text-sm font-medium w-7 h-7 flex items-center justify-center", day.isSame(dayjs(), 'day') && "bg-primary text-primary-foreground rounded-full")}>{day.format('D')}</span>
                                 <div className="mt-1 flex-grow overflow-y-auto space-y-1 text-[11px] leading-tight">
                                     {dayEvents.map(event => (

@@ -3,6 +3,10 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCommandPalette } from '../../hooks/useCommandPalette';
 import { useContactModal } from '../../hooks/useContactModal';
+import { useProcessModal } from '../../hooks/useProcessModal';
+import { useTaskModal } from '../../hooks/useTaskModal';
+import { useTransactionModal } from '../../hooks/useTransactionModal';
+import { TransactionType } from '../../types/types';
 import { 
     LayoutDashboard, BarChart3, Users, Briefcase, CheckSquare, Calendar, DollarSign, 
     Settings, GitFork, Trophy, Plus, Search 
@@ -19,6 +23,9 @@ interface Command {
 const CommandPalette: React.FC = () => {
     const { isOpen, setIsOpen } = useCommandPalette();
     const { open: openContactModal } = useContactModal();
+    const { open: openProcessModal } = useProcessModal();
+    const { open: openTaskModal } = useTaskModal();
+    const { open: openTransactionModal } = useTransactionModal();
     const [search, setSearch] = useState('');
     const navigate = useNavigate();
 
@@ -37,8 +44,10 @@ const CommandPalette: React.FC = () => {
 
         // Quick Actions
         { id: 'act-1', title: 'Novo Contato', icon: Plus, action: () => { navigate('/contatos'); openContactModal(); }, section: 'Ações Rápidas' },
-        { id: 'act-2', title: 'Novo Processo', icon: Plus, action: () => { navigate('/processos'); alert('Abrir modal de novo processo...'); }, section: 'Ações Rápidas' },
-        { id: 'act-3', title: 'Nova Tarefa', icon: Plus, action: () => { navigate('/tarefas'); alert('Abrir modal de nova tarefa...'); }, section: 'Ações Rápidas' },
+        { id: 'act-2', title: 'Novo Processo', icon: Plus, action: () => { navigate('/processos'); openProcessModal(); }, section: 'Ações Rápidas' },
+        { id: 'act-3', title: 'Nova Tarefa', icon: Plus, action: () => { navigate('/tarefas'); openTaskModal(); }, section: 'Ações Rápidas' },
+        { id: 'act-4', title: 'Registrar Receita', icon: Plus, action: () => { navigate('/financeiro'); openTransactionModal(TransactionType.Receita); }, section: 'Ações Rápidas' },
+        { id: 'act-5', title: 'Registrar Despesa', icon: Plus, action: () => { navigate('/financeiro'); openTransactionModal(TransactionType.Despesa); }, section: 'Ações Rápidas' },
     ];
     
     const handleAction = (action: () => void) => {
@@ -88,7 +97,7 @@ const CommandPalette: React.FC = () => {
                                 {cmds.map(cmd => (
                                     <li key={cmd.id} 
                                         onClick={() => handleAction(cmd.action)}
-                                        className="flex items-center p-2 rounded-md hover:bg-gray-100 dark:hover:bg-dark-border cursor-pointer"
+                                        className="flex items-center rounded-2xl p-2 transition hover:bg-white/70 dark:hover:bg-dark-border/60 cursor-pointer"
                                     >
                                         <cmd.icon className="h-4 w-4 mr-3 text-muted-foreground" />
                                         <span>{cmd.title}</span>

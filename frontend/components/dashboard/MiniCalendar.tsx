@@ -38,8 +38,8 @@ export const MiniCalendar: React.FC = () => {
                     </span>
                  </h3>
                 <div className="flex items-center">
-                    <button onClick={() => setCurrentDate(d => d.subtract(1, 'month'))} className="p-1 hover:bg-gray-100 dark:hover:bg-dark-border rounded" aria-label="Mês anterior"> <ChevronLeft size={20} /> </button>
-                    <button onClick={() => setCurrentDate(d => d.add(1, 'month'))} className="p-1 hover:bg-gray-100 dark:hover:bg-dark-border rounded" aria-label="Próximo mês"> <ChevronRight size={20} /> </button>
+                    <button onClick={() => setCurrentDate(d => d.subtract(1, 'month'))} className="rounded-full p-1 hover:bg-white/70 dark:hover:bg-dark-border/60" aria-label="Mês anterior"> <ChevronLeft size={20} /> </button>
+                    <button onClick={() => setCurrentDate(d => d.add(1, 'month'))} className="rounded-full p-1 hover:bg-white/70 dark:hover:bg-dark-border/60" aria-label="Próximo mês"> <ChevronRight size={20} /> </button>
                 </div>
             </div>
             <div className="grid grid-cols-7 text-center text-sm">
@@ -55,7 +55,7 @@ export const MiniCalendar: React.FC = () => {
                             <button className={cn(
                                 "w-8 h-8 rounded-full flex items-center justify-center text-sm",
                                 isToday && "bg-foreground text-background dark:bg-dark-foreground dark:text-dark-background font-bold",
-                                !isToday && "hover:bg-gray-100 dark:hover:bg-dark-border"
+                                !isToday && "hover:bg-white/70 dark:hover:bg-dark-border/60"
                             )}>
                                 {day.format('D')}
                             </button>

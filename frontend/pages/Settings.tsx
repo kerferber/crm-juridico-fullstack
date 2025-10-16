@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../co
 const Settings: React.FC = () => {
     return (
         <div className="space-y-6">
-            <h1 className="text-2xl font-bold">Configurações</h1>
+            <h1 className="text-[22px] font-semibold">Configurações</h1>
 
             <Card>
                 <CardHeader>

@@ -42,10 +42,15 @@ const Contacts: React.FC = () => {
   }, [contacts, searchTerm, selectedStatus, selectedOrigin, selectedOwner]);
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Contatos</h1>
-        <Button onClick={open}>
+    <div className="space-y-8">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h1 className="text-[22px] font-semibold tracking-tight">Contatos</h1>
+          <p className="text-sm text-muted-foreground">
+            Centralize informações de relacionamento e organize a carteira de clientes.
+          </p>
+        </div>
+        <Button size="lg" onClick={open} className="shadow-[0_18px_35px_-24px_rgba(79,70,229,0.45)]">
             <Plus className="mr-2 h-4 w-4" /> Novo Contato
         </Button>
       </div>
@@ -56,7 +61,7 @@ const Contacts: React.FC = () => {
             <CardTitle className="text-sm font-medium">Contatos Cadastrados</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">{contacts.length}</p>
+            <p className="text-lg font-semibold">{contacts.length}</p>
           </CardContent>
         </Card>
         <Card>
@@ -64,7 +69,7 @@ const Contacts: React.FC = () => {
             <CardTitle className="text-sm font-medium">Com Processo Ativo</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">{contatosComProcesso}</p>
+            <p className="text-lg font-semibold">{contatosComProcesso}</p>
           </CardContent>
         </Card>
         <Card>
@@ -72,27 +77,27 @@ const Contacts: React.FC = () => {
             <CardTitle className="text-sm font-medium">Sem Processo Ativo</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">{contatosSemProcesso}</p>
+            <p className="text-lg font-semibold">{contatosSemProcesso}</p>
           </CardContent>
         </Card>
       </div>
 
-      <Card>
+      <Card className="shadow-[0_26px_55px_-35px_rgba(79,70,229,0.28)]">
         <CardHeader>
             <CardTitle>Lista de Contatos</CardTitle>
             {/* --- SUGESTÃO 2: FILTROS AVANÇADOS --- */}
-            <div className="mt-4 flex items-center space-x-2">
-                <input type="text" placeholder="Buscar por nome..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full md:w-1/3 p-2 text-sm bg-background dark:bg-dark-background border rounded-md dark:border-dark-border"/>
-                <select value={selectedStatus} onChange={e => setSelectedStatus(e.target.value)} className="p-2 text-sm bg-background dark:bg-dark-background border rounded-md dark:border-dark-border">
+            <div className="mt-6 flex flex-wrap items-center gap-3">
+                <input type="text" placeholder="Buscar por nome..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full rounded-full border border-border/60 bg-white/70 px-4 py-2.5 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 dark:border-dark-border/60 dark:bg-dark-background/70 dark:text-dark-foreground md:w-1/3"/>
+                <select value={selectedStatus} onChange={e => setSelectedStatus(e.target.value)} className="rounded-full border border-border/60 bg-white/70 px-4 py-2.5 text-sm dark:border-dark-border/60 dark:bg-dark-background/70">
                     <option value="all">Todos Status</option>
                     <option value="Cliente">Cliente</option>
                     <option value="Lead">Lead</option>
                 </select>
-                <select value={selectedOrigin} onChange={e => setSelectedOrigin(e.target.value)} className="p-2 text-sm bg-background dark:bg-dark-background border rounded-md dark:border-dark-border">
+                <select value={selectedOrigin} onChange={e => setSelectedOrigin(e.target.value)} className="rounded-full border border-border/60 bg-white/70 px-4 py-2.5 text-sm dark:border-dark-border/60 dark:bg-dark-background/70">
                     <option value="all">Todas Origens</option>
                     {origins.map(o => <option key={o} value={o}>{o}</option>)}
                 </select>
-                <select value={selectedOwner} onChange={e => setSelectedOwner(e.target.value)} className="p-2 text-sm bg-background dark:bg-dark-background border rounded-md dark:border-dark-border">
+                <select value={selectedOwner} onChange={e => setSelectedOwner(e.target.value)} className="rounded-full border border-border/60 bg-white/70 px-4 py-2.5 text-sm dark:border-dark-border/60 dark:bg-dark-background/70">
                     <option value="all">Todos Donos</option>
                     {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
                 </select>
@@ -101,7 +106,7 @@ const Contacts: React.FC = () => {
         <CardContent>
             <div className="overflow-x-auto">
                 <table className="w-full text-sm text-left">
-                    <thead className="bg-gray-50 dark:bg-dark-border/20">
+                    <thead className="bg-white/60 backdrop-blur-sm dark:bg-dark-border/40">
                         <tr>
                             <th className="p-4">Nome</th>
                             <th className="p-4">CPF/CNPJ</th>
@@ -112,11 +117,11 @@ const Contacts: React.FC = () => {
                             <th className="p-4 text-right">Ações</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="divide-y divide-border/60 dark:divide-dark-border/60">
                         {filteredContacts.map(contact => {
                             const owner = users.find(u => u.id === contact.ownerId);
                             return (
-                                <tr key={contact.id} className="border-b dark:border-dark-border group">
+                                <tr key={contact.id} className="group transition hover:bg-white/55 dark:hover:bg-dark-border/30">
                                     <td className="p-4 font-medium">{contact.name}</td>
                                     <td className="p-4">{formatDocument(contact.document)}</td>
                                     <td className="p-4">{contact.origin}</td>

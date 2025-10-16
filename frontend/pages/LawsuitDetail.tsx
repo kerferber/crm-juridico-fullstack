@@ -109,7 +109,7 @@ const LawsuitDetail: React.FC = () => {
             <Briefcase className="h-8 w-8 text-primary" />
         </div>
         <div>
-            <h1 className="text-3xl font-bold">{lawsuit.internalNumber}</h1>
+            <h1 className="text-[22px] font-semibold">{lawsuit.internalNumber}</h1>
             <p className="text-muted-foreground">{lawsuit.area} - {lawsuit.status}</p>
         </div>
       </div>

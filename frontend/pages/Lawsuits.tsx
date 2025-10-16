@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card'
 import { useApp } from '../store/AppContext';
 import { formatDate } from '../lib/utils';
 import { Button, buttonVariants } from '../components/ui/Button';
+import { useProcessModal } from '../hooks/useProcessModal';
 import { Plus, Edit, CalendarPlus, CheckSquare } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { cn } from '../lib/utils';
@@ -19,6 +20,7 @@ const StatusPill: React.FC<{ status: string }> = ({ status }) => {
 
 const Lawsuits: React.FC = () => {
     const { lawsuits, contacts, users } = useApp();
+    const { open: openProcessModal } = useProcessModal();
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedArea, setSelectedArea] = useState('all');
     const [selectedStatus, setSelectedStatus] = useState('all');
@@ -42,24 +44,31 @@ const Lawsuits: React.FC = () => {
     }, [lawsuits, searchTerm, selectedArea, selectedStatus, selectedResponsible]);
     
     return (
-        <div className="space-y-6">
-            <div className="flex justify-between items-center">
-                <h1 className="text-2xl font-bold">Processos</h1>
-                <Button><Plus className="mr-2 h-4 w-4" /> Novo Processo</Button>
+        <div className="space-y-8">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div>
+                    <h1 className="text-[22px] font-semibold tracking-tight">Processos</h1>
+                    <p className="text-sm text-muted-foreground">
+                        Visão consolidada dos casos ativos, encerrados e em fase de arquivamento.
+                    </p>
+                </div>
+                <Button size="lg" className="shadow-[0_18px_35px_-24px_rgba(79,70,229,0.45)]" onClick={openProcessModal}>
+                    <Plus className="mr-2 h-4 w-4" /> Novo Processo
+                </Button>
             </div>
 
             <div className="grid gap-6 md:grid-cols-3">
-                <Card>
+                <Card className="bg-gradient-to-br from-white/95 to-white/80 shadow-[0_20px_50px_-32px_rgba(79,70,229,0.35)] dark:from-dark-card/90 dark:to-dark-card/75">
                     <CardHeader><CardTitle className="text-sm font-medium">Processos Ativos</CardTitle></CardHeader>
-                    <CardContent><p className="text-2xl font-bold">{processosAtivos}</p></CardContent>
+                    <CardContent><p className="text-lg font-semibold">{processosAtivos}</p></CardContent>
                 </Card>
-                <Card>
+                <Card className="bg-gradient-to-br from-slate-50/85 to-white/80 shadow-[0_20px_50px_-32px_rgba(15,23,42,0.25)] dark:from-dark-card/90 dark:to-dark-card/75">
                     <CardHeader><CardTitle className="text-sm font-medium">Fechamentos</CardTitle></CardHeader>
-                    <CardContent><p className="text-2xl font-bold">{fechamentos}</p></CardContent>
+                    <CardContent><p className="text-lg font-semibold">{fechamentos}</p></CardContent>
                 </Card>
-                <Card>
+                <Card className="bg-gradient-to-br from-sky-50/85 to-white/80 shadow-[0_20px_50px_-32px_rgba(14,165,233,0.30)] dark:from-dark-card/90 dark:to-dark-card/75">
                     <CardHeader><CardTitle className="text-sm font-medium">Arquivados</CardTitle></CardHeader>
-                    <CardContent><p className="text-2xl font-bold">{arquivados}</p></CardContent>
+                    <CardContent><p className="text-lg font-semibold">{arquivados}</p></CardContent>
                 </Card>
             </div>
             
@@ -67,17 +76,17 @@ const Lawsuits: React.FC = () => {
                 <CardHeader>
                     <CardTitle>Lista de Processos</CardTitle>
                      {/* --- SUGESTÃO 2: FILTROS AVANÇADOS --- */}
-                    <div className="mt-4 flex items-center space-x-2">
-                        <input type="text" placeholder="Buscar por nº interno..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full md:w-1/4 p-2 text-sm bg-background dark:bg-dark-background border rounded-md dark:border-dark-border"/>
-                        <select value={selectedArea} onChange={e => setSelectedArea(e.target.value)} className="p-2 text-sm bg-background dark:bg-dark-background border rounded-md dark:border-dark-border">
+                    <div className="mt-6 flex flex-wrap items-center gap-3">
+                        <input type="text" placeholder="Buscar por nº interno..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full rounded-full border border-border/60 bg-white/70 px-4 py-2.5 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 dark:border-dark-border/60 dark:bg-dark-background/70 dark:text-dark-foreground md:w-1/4"/>
+                        <select value={selectedArea} onChange={e => setSelectedArea(e.target.value)} className="rounded-full border border-border/60 bg-white/70 px-4 py-2.5 text-sm dark:border-dark-border/60 dark:bg-dark-background/70">
                             <option value="all">Todas as Áreas</option>
                             {areas.map(a => <option key={a} value={a}>{a}</option>)}
                         </select>
-                        <select value={selectedStatus} onChange={e => setSelectedStatus(e.target.value)} className="p-2 text-sm bg-background dark:bg-dark-background border rounded-md dark:border-dark-border">
+                        <select value={selectedStatus} onChange={e => setSelectedStatus(e.target.value)} className="rounded-full border border-border/60 bg-white/70 px-4 py-2.5 text-sm dark:border-dark-border/60 dark:bg-dark-background/70">
                             <option value="all">Todos Status</option>
                             {statuses.map(s => <option key={s} value={s}>{s}</option>)}
                         </select>
-                         <select value={selectedResponsible} onChange={e => setSelectedResponsible(e.target.value)} className="p-2 text-sm bg-background dark:bg-dark-background border rounded-md dark:border-dark-border">
+                         <select value={selectedResponsible} onChange={e => setSelectedResponsible(e.target.value)} className="rounded-full border border-border/60 bg-white/70 px-4 py-2.5 text-sm dark:border-dark-border/60 dark:bg-dark-background/70">
                             <option value="all">Todos Responsáveis</option>
                             {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
                         </select>
@@ -86,7 +95,7 @@ const Lawsuits: React.FC = () => {
                 <CardContent>
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm text-left">
-                            <thead className="bg-gray-50 dark:bg-dark-border/20">
+                            <thead className="bg-white/60 backdrop-blur-sm dark:bg-dark-border/40">
                                 <tr>
                                     <th className="p-4">Nº Interno</th>
                                     <th className="p-4">Cliente</th>
@@ -97,12 +106,12 @@ const Lawsuits: React.FC = () => {
                                     <th className="p-4 text-right">Ações</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody className="divide-y divide-border/60 dark:divide-dark-border/60">
                                 {filteredLawsuits.map(lawsuit => {
                                     const client = contacts.find(c => c.id === lawsuit.clientId);
                                     const responsible = users.find(u => u.id === lawsuit.responsibleId);
                                     return (
-                                        <tr key={lawsuit.id} className="border-b dark:border-dark-border group">
+                                        <tr key={lawsuit.id} className="group transition hover:bg-white/55 dark:hover:bg-dark-border/25">
                                             <td className="p-4 font-medium">{lawsuit.internalNumber}</td>
                                             <td className="p-4">{client?.name || 'N/A'}</td>
                                             <td className="p-4">{responsible?.name || 'N/A'}</td>

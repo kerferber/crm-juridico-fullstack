@@ -1,0 +1,235 @@
+import React, { useEffect, useMemo, useState } from 'react';
+import dayjs from 'dayjs';
+import { Button } from '../ui/Button';
+import { Loader2, ClipboardList, X } from 'lucide-react';
+import { useTaskModal } from '../../hooks/useTaskModal';
+import { useApp } from '../../store/AppContext';
+import { TaskStatus } from '../../types/types';
+
+const STATUS_OPTIONS = [TaskStatus.Pendente, TaskStatus.Atrasada, TaskStatus.Concluida];
+
+const CreateTaskModal: React.FC = () => {
+  const { isOpen, close } = useTaskModal();
+  const { users, lawsuits, contacts, addTask } = useApp();
+
+  const [title, setTitle] = useState('');
+  const [dueDate, setDueDate] = useState('');
+  const [deadline, setDeadline] = useState('');
+  const [status, setStatus] = useState<TaskStatus>(TaskStatus.Pendente);
+  const [responsibleId, setResponsibleId] = useState<number | ''>('');
+  const [lawsuitId, setLawsuitId] = useState<number | ''>('');
+  const [contactId, setContactId] = useState<number | ''>('');
+  const [score, setScore] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const defaultResponsibleId = useMemo(() => users[0]?.id ?? '', [users]);
+  const today = dayjs().format('YYYY-MM-DD');
+
+  useEffect(() => {
+    if (isOpen) {
+      setTitle('');
+      setDueDate(today);
+      setDeadline(today);
+      setStatus(TaskStatus.Pendente);
+      setResponsibleId(defaultResponsibleId);
+      setLawsuitId('');
+      setContactId('');
+      setScore(0);
+      setError(null);
+      document.body.classList.add('overflow-hidden');
+      const handleEsc = (event: KeyboardEvent) => {
+        if (event.key === 'Escape') close();
+      };
+      window.addEventListener('keydown', handleEsc);
+      return () => {
+        window.removeEventListener('keydown', handleEsc);
+        document.body.classList.remove('overflow-hidden');
+      };
+    }
+    return undefined;
+  }, [isOpen, close, defaultResponsibleId, today]);
+
+  if (!isOpen) return null;
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!title.trim()) {
+      setError('Informe o título da tarefa.');
+      return;
+    }
+    if (!responsibleId) {
+      setError('Selecione o responsável.');
+      return;
+    }
+    if (!dueDate) {
+      setError('Informe a data prevista.');
+      return;
+    }
+    if (!deadline) {
+      setError('Informe a data limite.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      await addTask({
+        title: title.trim(),
+        dueDate,
+        deadline,
+        responsibleId: Number(responsibleId),
+        lawsuitId: lawsuitId ? Number(lawsuitId) : undefined,
+        clientId: contactId ? Number(contactId) : undefined,
+        score,
+        status,
+      });
+      close();
+    } catch (err) {
+      setError('Não foi possível criar a tarefa.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleClose = () => close();
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6" onClick={handleClose}>
+      <div
+        className="relative flex w-full max-w-2xl flex-col rounded-xl border border-border/60 bg-white shadow-xl dark:border-dark-border/70 dark:bg-dark-card"
+        onClick={event => event.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b border-border/60 px-5 py-4 dark:border-dark-border/70">
+          <div className="flex items-center gap-3">
+            <div className="rounded-md bg-primary/10 p-2 text-primary dark:bg-dark-primary/20 dark:text-dark-primary">
+              <ClipboardList className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-[18px] font-semibold">Nova Tarefa</h2>
+              <p className="text-xs text-muted-foreground">Defina os detalhes para acompanhar suas entregas.</p>
+            </div>
+          </div>
+          <Button variant="ghost" size="icon" onClick={handleClose}>
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="flex max-h-[70vh] flex-col gap-5 overflow-y-auto px-5 py-4">
+          {error && <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-200">{error}</div>}
+          <label className="flex flex-col gap-1 text-xs font-medium">
+            Título
+            <input
+              type="text"
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+              className="rounded-md border border-border/60 bg-transparent px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-dark-border/60"
+              placeholder="Ex.: Elaborar peça inicial"
+            />
+          </label>
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="flex flex-col gap-1 text-xs font-medium">
+              Data prevista
+              <input
+                type="date"
+                value={dueDate}
+                onChange={e => setDueDate(e.target.value)}
+                className="rounded-md border border-border/60 bg-transparent px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-dark-border/60"
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-xs font-medium">
+              Prazo limite
+              <input
+                type="date"
+                value={deadline}
+                onChange={e => setDeadline(e.target.value)}
+                className="rounded-md border border-border/60 bg-transparent px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-dark-border/60"
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-xs font-medium">
+              Status inicial
+              <select
+                value={status}
+                onChange={e => setStatus(e.target.value as TaskStatus)}
+                className="rounded-md border border-border/60 bg-transparent px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-dark-border/60"
+              >
+                {STATUS_OPTIONS.map(option => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1 text-xs font-medium">
+              Responsável
+              <select
+                value={responsibleId}
+                onChange={e => setResponsibleId(Number(e.target.value))}
+                className="rounded-md border border-border/60 bg-transparent px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-dark-border/60"
+              >
+                <option value="" disabled>Selecione</option>
+                {users.map(user => (
+                  <option key={user.id} value={user.id}>{user.name}</option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1 text-xs font-medium">
+              Processo vinculado (opcional)
+              <select
+                value={lawsuitId}
+                onChange={e => setLawsuitId(e.target.value ? Number(e.target.value) : '')}
+                className="rounded-md border border-border/60 bg-transparent px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-dark-border/60"
+              >
+                <option value="">Sem vínculo</option>
+                {lawsuits.map(l => (
+                  <option key={l.id} value={l.id}>{l.internalNumber}</option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1 text-xs font-medium">
+              Contato associado (opcional)
+              <select
+                value={contactId}
+                onChange={e => setContactId(e.target.value ? Number(e.target.value) : '')}
+                className="rounded-md border border-border/60 bg-transparent px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-dark-border/60"
+              >
+                <option value="">Sem vínculo</option>
+                {contacts.map(contact => (
+                  <option key={contact.id} value={contact.id}>{contact.name}</option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1 text-xs font-medium">
+              Pontuação
+              <input
+                type="number"
+                min={0}
+                value={score}
+                onChange={e => setScore(Number(e.target.value))}
+                className="rounded-md border border-border/60 bg-transparent px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-dark-border/60"
+              />
+            </label>
+          </div>
+
+          <div className="flex flex-col-reverse gap-3 border-t border-border/60 pt-4 dark:border-dark-border/60 sm:flex-row sm:items-center sm:justify-between">
+            <Button variant="ghost" type="button" onClick={handleClose} disabled={isSubmitting}>Cancelar</Button>
+            <div className="flex items-center gap-2">
+              <select
+                value={status}
+                onChange={e => setStatus(e.target.value as TaskStatus)}
+                className="hidden"
+              ></select>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Salvando...
+                  </>
+                ) : 'Salvar tarefa'}
+              </Button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+export default CreateTaskModal;

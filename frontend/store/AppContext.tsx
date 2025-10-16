@@ -193,7 +193,7 @@ interface AppContextType {
   error: string | null;
   updateKanbanCardColumn: (cardId: string, newColumn: KanbanColumn, newPhase: KanbanPhase) => Promise<void>;
   updateTaskStatus: (taskId: number, newStatus: TaskStatus) => Promise<void>;
-  addTask: (taskData: Omit<Task, 'id' | 'status'>) => Promise<void>;
+  addTask: (taskData: Omit<Task, 'id' | 'status'> & { status?: TaskStatus }) => Promise<void>;
   addKanbanCard: (cardData: Omit<KanbanCard, 'id'>) => Promise<void>;
   addContact: (contactData: {
     name: string;
@@ -206,6 +206,25 @@ interface AppContextType {
     profession: string;
     lastInteraction?: string;
   }) => Promise<Contact>;
+  addLawsuit: (data: {
+    internalNumber: string;
+    area: Lawsuit['area'];
+    phase: string;
+    deadline: string;
+    status: Lawsuit['status'];
+    clientId: number;
+    responsibleId: number;
+    kanbanColumn: string;
+    kanbanPhase: string;
+  }) => Promise<Lawsuit>;
+  addTransaction: (data: {
+    date: string;
+    description: string;
+    category: string;
+    account: string;
+    value: number;
+    type: TransactionType;
+  }) => Promise<Transaction>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -322,10 +341,12 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const addTask = async (taskData: Omit<Task, 'id' | 'status'>) => {
-    const computedStatus = dayjs(taskData.deadline).isBefore(dayjs(), 'day')
-      ? TaskStatus.Atrasada
-      : TaskStatus.Pendente;
+  const addTask = async (taskData: Omit<Task, 'id' | 'status'> & { status?: TaskStatus }) => {
+    const computedStatus = taskData.status
+      ? taskData.status
+      : dayjs(taskData.deadline).isBefore(dayjs(), 'day')
+        ? TaskStatus.Atrasada
+        : TaskStatus.Pendente;
 
     try {
       if (isUsingMockApi) {
@@ -459,6 +480,107 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  const addLawsuit = async (data: {
+    internalNumber: string;
+    area: Lawsuit['area'];
+    phase: string;
+    deadline: string;
+    status: Lawsuit['status'];
+    clientId: number;
+    responsibleId: number;
+    kanbanColumn: string;
+    kanbanPhase: string;
+  }): Promise<Lawsuit> => {
+    try {
+      if (isUsingMockApi) {
+        const newItem: Lawsuit = {
+          id: Math.max(...lawsuits.map(l => l.id), 0) + 1,
+          internalNumber: data.internalNumber,
+          area: data.area,
+          phase: data.phase,
+          deadline: data.deadline,
+          status: data.status,
+          clientId: data.clientId,
+          responsibleId: data.responsibleId,
+          kanbanColumn: normalizeKanbanColumn(data.kanbanColumn),
+          kanbanPhase: normalizeKanbanPhase(data.kanbanPhase),
+        };
+        setLawsuits(prev => [...prev, newItem]);
+        setKanbanCards(prev => [...prev, mapKanbanCardFromLawsuit(newItem)]);
+        setError(null);
+        return newItem;
+      }
+
+      const payload = {
+        internal_number: data.internalNumber,
+        area: data.area,
+        phase: data.phase,
+        deadline: formatDateForApi(data.deadline),
+        status: data.status,
+        client_id: data.clientId,
+        responsible_id: data.responsibleId,
+        kanban_column: data.kanbanColumn,
+        kanban_phase: data.kanbanPhase,
+      };
+
+      const created = await apiClient.post('/lawsuits', payload);
+      const mapped = mapLawsuitFromApi(created);
+      setLawsuits(prev => [...prev, mapped]);
+      setKanbanCards(prev => [...prev, mapKanbanCardFromLawsuit(mapped)]);
+      setError(null);
+      return mapped;
+    } catch (err) {
+      console.error(err);
+      setError('Não foi possível criar o processo no backend.');
+      throw err;
+    }
+  };
+
+  const addTransaction = async (data: {
+    date: string;
+    description: string;
+    category: string;
+    account: string;
+    value: number;
+    type: TransactionType;
+  }): Promise<Transaction> => {
+    try {
+      if (isUsingMockApi) {
+        const newItem: Transaction = {
+          id: Math.max(...transactions.map(t => t.id), 0) + 1,
+          date: data.date,
+          description: data.description,
+          category: data.category,
+          account: data.account,
+          value: data.value,
+          type: data.type,
+        };
+        setTransactions(prev => [...prev, newItem]);
+        setError(null);
+        return newItem;
+      }
+
+      const payload = {
+        date: formatDateForApi(data.date),
+        description: data.description,
+        category: data.category,
+        account: data.account,
+        value: data.value,
+        type: data.type,
+      };
+
+      const created = await apiClient.post('/transactions', payload);
+      const mapped = mapTransactionFromApi(created);
+      setTransactions(prev => [...prev, mapped]);
+      setError(null);
+      return mapped;
+    } catch (err) {
+      console.error(err);
+      setError('Não foi possível registrar a transação.');
+      throw err;
+    }
+  };
+
   const value = {
     users,
     contacts,
@@ -474,6 +596,8 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     addTask,
     addKanbanCard,
     addContact,
+    addLawsuit,
+    addTransaction,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
