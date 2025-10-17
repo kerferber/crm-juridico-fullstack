@@ -119,7 +119,7 @@ const TaskListRow: React.FC<{ task: Task; onSelect: (task: Task) => void }> = ({
     <button
       type="button"
       onClick={() => onSelect(task)}
-      className="flex w-full items-center justify-between gap-6 rounded-xl px-4 py-3 text-left transition hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+      className="flex w-full items-center justify-between gap-6 rounded-lg px-3 py-2.5 text-left transition hover:bg-muted/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 dark:hover:bg-dark-border/30"
     >
       <div className="flex flex-col gap-1">
         <span className="text-sm font-medium text-foreground dark:text-dark-foreground">
@@ -132,7 +132,7 @@ const TaskListRow: React.FC<{ task: Task; onSelect: (task: Task) => void }> = ({
       </div>
       <span
         className={cn(
-          'rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wide',
+          'rounded-lg px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide',
           task.status === TaskStatus.Concluida
             ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-200'
             : isOverdue
@@ -153,24 +153,24 @@ export const TaskListView: React.FC<TaskListViewProps> = ({ sections, onSelect }
   }
 
   return (
-    <div className="space-y-6 px-6 py-6">
+    <div className="space-y-4 px-5 py-5">
       {sectionsWithContent.map(section => (
         <div
           key={section.key}
-          className="rounded-3xl border border-border/50 bg-white/80 shadow-sm dark:border-dark-border/50 dark:bg-dark-card/60"
+          className="rounded-xl border border-border/60 bg-white shadow-sm dark:border-dark-border/60 dark:bg-dark-card/70"
         >
-          <header className="flex items-center justify-between border-b border-border/40 px-5 py-4 dark:border-dark-border/40">
+          <header className="flex items-center justify-between border-b border-border/60 px-4 py-3 dark:border-dark-border/50">
             <div>
-              <h3 className="text-sm font-semibold uppercase tracking-[0.24em] text-muted-foreground/80">
+              <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground/80">
                 {section.title}
               </h3>
-              <p className="text-xs text-muted-foreground">{section.subtitle}</p>
+              <p className="text-[11px] text-muted-foreground">{section.subtitle}</p>
             </div>
             <span className={cn('rounded-full px-3 py-1 text-sm font-semibold', section.accentClass)}>
               {section.tasks.length}
             </span>
           </header>
-          <div className="divide-y divide-border/40 dark:divide-dark-border/40">
+          <div className="divide-y divide-border/60 dark:divide-dark-border/50">
             {section.tasks.map(task => (
               <TaskListRow key={task.id} task={task} onSelect={onSelect} />
             ))}
@@ -196,7 +196,7 @@ const TaskBoardCard: React.FC<{ task: Task; onSelect: (task: Task) => void }> = 
     <button
       type="button"
       onClick={() => onSelect(task)}
-      className="flex w-full flex-col gap-3 rounded-2xl border border-border/50 bg-white/85 p-4 text-left shadow-sm transition hover:-translate-y-[1px] hover:border-primary/60 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 dark:border-dark-border/60 dark:bg-dark-card/70"
+      className="flex w-full flex-col gap-3 overflow-hidden rounded-xl border border-border/60 bg-white px-4 pb-4 text-left shadow-[0_14px_24px_-22px_rgba(15,23,42,0.38)] transition hover:-translate-y-[2px] hover:border-primary/50 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 dark:border-dark-border/60 dark:bg-dark-card/70"
     >
       <span className="text-sm font-semibold text-foreground dark:text-dark-foreground">
         {task.title}
@@ -208,7 +208,7 @@ const TaskBoardCard: React.FC<{ task: Task; onSelect: (task: Task) => void }> = 
       <div className="flex items-center justify-between">
         <span
           className={cn(
-            'flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-medium',
+            'flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-medium',
             task.status === TaskStatus.Concluida
               ? 'bg-emerald-100/60 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200'
               : isOverdue

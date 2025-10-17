@@ -60,17 +60,17 @@ const Tasks: React.FC = () => {
   const noTasks = sections.every(section => section.tasks.length === 0);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-5">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-[22px] font-semibold tracking-tight">Tarefas</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-lg font-semibold tracking-tight">Tarefas</h1>
+          <p className="text-xs text-muted-foreground">
             Organize prioridades e alterne entre visão em lista ou quadro.
           </p>
         </div>
         <Button
-          size="lg"
-          className="shadow-[0_18px_35px_-24px_rgba(79,70,229,0.45)]"
+          size="sm"
+          className="rounded-md px-3 text-xs font-semibold shadow-[0_12px_24px_-20px_rgba(79,70,229,0.4)]"
           onClick={openTaskModal}
         >
           <Plus className="mr-2 h-4 w-4" />
@@ -86,10 +86,11 @@ const Tasks: React.FC = () => {
               <CardDescription>Filtre por período e escolha como deseja visualizar.</CardDescription>
             </div>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-              <div className="inline-flex rounded-full border border-border/60 bg-white/70 p-1 text-muted-foreground dark:border-dark-border/60 dark:bg-dark-background/60">
+              <div className="inline-flex rounded-lg border border-border/60 bg-white p-1 text-muted-foreground dark:border-dark-border/60 dark:bg-dark-background/70">
                 <Button
                   variant={activeTab === 'today' ? 'secondary' : 'ghost'}
                   size="sm"
+                  className="px-3 text-xs"
                   onClick={() => setActiveTab('today')}
                 >
                   Hoje
@@ -97,6 +98,7 @@ const Tasks: React.FC = () => {
                 <Button
                   variant={activeTab === 'week' ? 'secondary' : 'ghost'}
                   size="sm"
+                  className="px-3 text-xs"
                   onClick={() => setActiveTab('week')}
                 >
                   Semana
@@ -104,16 +106,17 @@ const Tasks: React.FC = () => {
                 <Button
                   variant={activeTab === 'all' ? 'secondary' : 'ghost'}
                   size="sm"
+                  className="px-3 text-xs"
                   onClick={() => setActiveTab('all')}
                 >
                   Todas
                 </Button>
               </div>
-              <div className="inline-flex rounded-full border border-border/60 bg-white/70 p-1 text-muted-foreground dark:border-dark-border/60 dark:bg-dark-background/60">
+              <div className="inline-flex rounded-lg border border-border/60 bg-white p-1 text-muted-foreground dark:border-dark-border/60 dark:bg-dark-background/70">
                 <Button
                   size="sm"
                   variant={view === 'list' ? 'secondary' : 'ghost'}
-                  className="flex items-center gap-1 px-3"
+                  className="flex items-center gap-1 px-3 text-xs"
                   onClick={() => setView('list')}
                 >
                   <LayoutList className="h-4 w-4" />
@@ -122,7 +125,7 @@ const Tasks: React.FC = () => {
                 <Button
                   size="sm"
                   variant={view === 'board' ? 'secondary' : 'ghost'}
-                  className="flex items-center gap-1 px-3"
+                  className="flex items-center gap-1 px-3 text-xs"
                   onClick={() => setView('board')}
                 >
                   <LayoutGrid className="h-4 w-4" />
@@ -132,14 +135,14 @@ const Tasks: React.FC = () => {
             </div>
           </div>
         </CardHeader>
-        <CardContent className="p-0">
+        <CardContent className="px-0 pb-0">
           {view === 'list' ? (
             <TaskListView sections={sections} onSelect={openForEdit} />
           ) : (
             <TaskBoardView sections={sections} onSelect={openForEdit} />
           )}
           {noTasks && (
-            <p className="px-6 py-12 text-center text-sm text-muted-foreground">
+            <p className="px-4 py-10 text-center text-xs text-muted-foreground">
               Nenhuma tarefa para esta combinação de filtros.
             </p>
           )}

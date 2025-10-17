@@ -1,8 +1,14 @@
 import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
 
+export interface ProcessModalDefaults {
+  clientId?: number;
+  responsibleId?: number;
+}
+
 interface ProcessModalContextValue {
   isOpen: boolean;
-  open: () => void;
+  defaults: ProcessModalDefaults | null;
+  open: (defaults?: ProcessModalDefaults) => void;
   close: () => void;
 }
 
@@ -10,11 +16,22 @@ const ProcessModalContext = createContext<ProcessModalContextValue | undefined>(
 
 export const ProcessModalProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [defaults, setDefaults] = useState<ProcessModalDefaults | null>(null);
 
-  const open = useCallback(() => setIsOpen(true), []);
-  const close = useCallback(() => setIsOpen(false), []);
+  const open = useCallback((nextDefaults?: ProcessModalDefaults) => {
+    setDefaults(nextDefaults ?? null);
+    setIsOpen(true);
+  }, []);
 
-  const value = useMemo(() => ({ isOpen, open, close }), [isOpen, open, close]);
+  const close = useCallback(() => {
+    setIsOpen(false);
+    setDefaults(null);
+  }, []);
+
+  const value = useMemo(
+    () => ({ isOpen, defaults, open, close }),
+    [isOpen, defaults, open, close]
+  );
 
   return <ProcessModalContext.Provider value={value}>{children}</ProcessModalContext.Provider>;
 };

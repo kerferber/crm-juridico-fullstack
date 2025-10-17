@@ -25,21 +25,21 @@ const Financial: React.FC = () => {
     const saldo = transactions.reduce((acc, t) => acc + (t.type === TransactionType.Receita ? t.value : -t.value), 0);
 
     return (
-        <div className="space-y-6">
-            <div className="flex justify-between items-center">
-                <h1 className="text-[22px] font-semibold">Financeiro</h1>
-                <div className="space-x-2">
-                    <Button variant="secondary" onClick={() => openTransactionModal(TransactionType.Receita)}><Plus className="mr-2 h-4 w-4" /> Nova Receita</Button>
-                    <Button variant="destructive" onClick={() => openTransactionModal(TransactionType.Despesa)}><Minus className="mr-2 h-4 w-4" /> Nova Despesa</Button>
-                    <Button variant="outline"><ArrowRightLeft className="mr-2 h-4 w-4" /> Transferência</Button>
+        <div className="space-y-5">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <h1 className="text-lg font-semibold">Financeiro</h1>
+                <div className="flex flex-wrap items-center gap-2">
+                    <Button size="sm" variant="secondary" className="rounded-md px-3 text-xs font-semibold" onClick={() => openTransactionModal(TransactionType.Receita)}><Plus className="mr-2 h-4 w-4" /> Nova receita</Button>
+                    <Button size="sm" variant="destructive" className="rounded-md px-3 text-xs font-semibold" onClick={() => openTransactionModal(TransactionType.Despesa)}><Minus className="mr-2 h-4 w-4" /> Nova despesa</Button>
+                    <Button size="sm" variant="outline" className="rounded-md px-3 text-xs font-semibold"><ArrowRightLeft className="mr-2 h-4 w-4" /> Transferência</Button>
                 </div>
             </div>
 
-            <div className="grid gap-6 md:grid-cols-4">
-                 <Card><CardHeader><CardTitle className="text-sm font-medium">Saldo Total</CardTitle></CardHeader><CardContent><p className="text-lg font-semibold">{formatCurrency(saldo)}</p></CardContent></Card>
-                 <Card><CardHeader><CardTitle className="text-sm font-medium">Receita Mensal Prevista</CardTitle></CardHeader><CardContent><p className="text-lg font-semibold">{formatCurrency(15000)}</p></CardContent></Card>
-                 <Card><CardHeader><CardTitle className="text-sm font-medium">Despesa Mensal Prevista</CardTitle></CardHeader><CardContent><p className="text-lg font-semibold">{formatCurrency(8500)}</p></CardContent></Card>
-                 <Card><CardHeader><CardTitle className="text-sm font-medium">Pagamentos Atrasados</CardTitle></CardHeader><CardContent><p className="text-lg font-semibold text-red-500">{formatCurrency(1200)}</p></CardContent></Card>
+            <div className="grid gap-3 md:grid-cols-4">
+                 <Card><CardHeader><CardTitle className="text-sm font-medium">Saldo total</CardTitle></CardHeader><CardContent><p className="text-base font-semibold">{formatCurrency(saldo)}</p></CardContent></Card>
+                 <Card><CardHeader><CardTitle className="text-sm font-medium">Receita mensal prevista</CardTitle></CardHeader><CardContent><p className="text-base font-semibold">{formatCurrency(15000)}</p></CardContent></Card>
+                 <Card><CardHeader><CardTitle className="text-sm font-medium">Despesa mensal prevista</CardTitle></CardHeader><CardContent><p className="text-base font-semibold">{formatCurrency(8500)}</p></CardContent></Card>
+                 <Card><CardHeader><CardTitle className="text-sm font-medium">Pagamentos atrasados</CardTitle></CardHeader><CardContent><p className="text-base font-semibold text-red-500">{formatCurrency(1200)}</p></CardContent></Card>
             </div>
             
             <Card>

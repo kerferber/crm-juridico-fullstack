@@ -3,9 +3,48 @@ import { Award, Star, Target, Scale, Shield, Landmark, Check } from 'lucide-reac
 import dayjs from 'dayjs';
 
 export const USERS: User[] = [
-    { id: 1, name: 'Carlos Ferreira', avatar: 'https://i.pravatar.cc/150?u=a042581f4e29026704d' },
-    { id: 2, name: 'Sofia Ribeiro', avatar: 'https://i.pravatar.cc/150?u=a042581f4e29026705d' },
-    { id: 3, name: 'Miguel Almeida', avatar: 'https://i.pravatar.cc/150?u=a042581f4e29026706d' },
+    {
+        id: 1,
+        name: 'Carlos Ferreira',
+        email: 'carlos.ferreira@example.com',
+        avatar: 'https://i.pravatar.cc/150?u=a042581f4e29026704d',
+        jobTitle: 'Diretor Comercial',
+        phone: '(11) 97777-1234',
+        personalEmail: 'c.ferreira@gmail.com',
+        address: 'Rua das Acácias, 250',
+        city: 'São Paulo',
+        state: 'SP',
+        birthdate: '1986-03-22',
+        linkedinUrl: 'https://linkedin.com/in/carlosferreira',
+        bio: 'Especialista em expansão comercial e relacionamento com grandes clientes.',
+    },
+    {
+        id: 2,
+        name: 'Sofia Ribeiro',
+        email: 'sofia.ribeiro@example.com',
+        avatar: 'https://i.pravatar.cc/150?u=a042581f4e29026705d',
+        jobTitle: 'Coordenadora de Operações',
+        phone: '(21) 98888-6543',
+        personalEmail: 'sofia.ribeiro@gmail.com',
+        city: 'Rio de Janeiro',
+        state: 'RJ',
+        birthdate: '1992-07-15',
+        bio: 'Responsável pelo acompanhamento de performance e qualidade do atendimento.',
+    },
+    {
+        id: 3,
+        name: 'Miguel Almeida',
+        email: 'miguel.almeida@example.com',
+        avatar: 'https://i.pravatar.cc/150?u=a042581f4e29026706d',
+        jobTitle: 'Advogado Sênior',
+        phone: '(31) 96666-4321',
+        personalEmail: 'miguel.almeida@gmail.com',
+        address: 'Av. Amazonas, 900',
+        city: 'Belo Horizonte',
+        state: 'MG',
+        birthdate: '1984-11-02',
+        bio: 'Atuação focada em direito trabalhista e previdenciário.',
+    },
 ];
 
 export const CONTACTS: Contact[] = [

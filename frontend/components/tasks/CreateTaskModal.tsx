@@ -25,6 +25,12 @@ const CreateTaskModal: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const defaultResponsibleId = useMemo(() => users[0]?.id ?? '', [users]);
+  const filteredLawsuits = useMemo(() => {
+    if (typeof contactId === 'number') {
+      return lawsuits.filter(lawsuit => lawsuit.clientId === contactId);
+    }
+    return lawsuits;
+  }, [lawsuits, contactId]);
   const today = dayjs().format('YYYY-MM-DD');
 
   useEffect(() => {
@@ -70,6 +76,36 @@ const CreateTaskModal: React.FC = () => {
       document.body.classList.remove('overflow-hidden');
     };
   }, [isOpen, mode, task, defaults, close, defaultResponsibleId, today]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    if (lawsuitId) {
+      const selected = lawsuits.find(l => l.id === lawsuitId);
+      if (selected?.clientId && contactId !== selected.clientId) {
+        setContactId(selected.clientId);
+      }
+    }
+  }, [lawsuitId, lawsuits, contactId, isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    if (typeof contactId === 'number' && lawsuitId) {
+      const selected = lawsuits.find(l => l.id === lawsuitId);
+      if (selected && selected.clientId !== contactId) {
+        setLawsuitId('');
+      }
+    }
+  }, [contactId, lawsuits, lawsuitId, isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    if (!responsibleId && typeof contactId === 'number') {
+      const relatedContact = contacts.find(contact => contact.id === contactId);
+      if (relatedContact?.ownerId) {
+        setResponsibleId(relatedContact.ownerId);
+      }
+    }
+  }, [contactId, contacts, responsibleId, isOpen]);
 
   if (!isOpen) return null;
 
@@ -196,6 +232,30 @@ const CreateTaskModal: React.FC = () => {
                 className="rounded-md border border-border/60 bg-transparent px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-dark-border/60"
               />
             </label>
+          </div>
+
+          <ContactSearchInput
+            label="Cliente relacionado"
+            contacts={contacts}
+            value={contactId}
+            onSelect={selectedId => {
+              setContactId(selectedId);
+              if (selectedId) {
+                const relatedLawsuits = lawsuits.filter(l => l.clientId === selectedId);
+                if (relatedLawsuits.length === 1) {
+                  setLawsuitId(relatedLawsuits[0].id);
+                }
+                const contactOwner = contacts.find(contact => contact.id === selectedId)?.ownerId;
+                if (contactOwner) {
+                  setResponsibleId(contactOwner);
+                }
+              } else {
+                setLawsuitId('');
+              }
+            }}
+            helperText="Conecte a tarefa ao cliente correto. Digite pelo menos duas letras para pesquisar."
+          />
+          <div className="grid gap-4 md:grid-cols-2">
             <label className="flex flex-col gap-1 text-xs font-medium">
               Status inicial
               <select
@@ -229,21 +289,10 @@ const CreateTaskModal: React.FC = () => {
                 className="rounded-md border border-border/60 bg-transparent px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-dark-border/60"
               >
                 <option value="">Sem vínculo</option>
-                {lawsuits.map(l => (
-                  <option key={l.id} value={l.id}>{l.internalNumber}</option>
-                ))}
-              </select>
-            </label>
-            <label className="flex flex-col gap-1 text-xs font-medium">
-              Contato associado (opcional)
-              <select
-                value={contactId}
-                onChange={e => setContactId(e.target.value ? Number(e.target.value) : '')}
-                className="rounded-md border border-border/60 bg-transparent px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-dark-border/60"
-              >
-                <option value="">Sem vínculo</option>
-                {contacts.map(contact => (
-                  <option key={contact.id} value={contact.id}>{contact.name}</option>
+                {filteredLawsuits.map(lawsuit => (
+                  <option key={lawsuit.id} value={lawsuit.id}>
+                    {lawsuit.internalNumber}
+                  </option>
                 ))}
               </select>
             </label>

@@ -28,6 +28,20 @@ export interface User {
   id: number;
   name: string;
   avatar: string;
+  email: string;
+  jobTitle?: string;
+  personalEmail?: string;
+  phone?: string;
+  secondaryPhone?: string;
+  whatsapp?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  birthdate?: string;
+  linkedinUrl?: string;
+  instagramUrl?: string;
+  bio?: string;
 }
 
 export interface Contact {

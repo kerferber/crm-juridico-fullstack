@@ -27,6 +27,18 @@ const mockApi = {
   '/transactions': TRANSACTIONS,
 };
 
+export class ApiError extends Error {
+  status: number;
+  data: unknown;
+
+  constructor(status: number, message: string, data: unknown = null) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.data = data;
+  }
+}
+
 async function request<T = unknown>(endpoint: string, init: RequestInit = {}): Promise<T> {
   if (isMockMode) {
     console.log(`[API MOCK] ${init.method ?? 'GET'}: ${endpoint}`);
@@ -63,18 +75,40 @@ async function request<T = unknown>(endpoint: string, init: RequestInit = {}): P
     credentials: 'include',
   });
 
+  const contentType = response.headers.get('content-type') ?? '';
+  const parseBody = async () => {
+    if (contentType.includes('application/json')) {
+      try {
+        return await response.json();
+      } catch {
+        return null;
+      }
+    }
+
+    try {
+      return await response.text();
+    } catch {
+      return null;
+    }
+  };
+
   if (!response.ok) {
-    const errorText = await response.text().catch(() => '');
-    throw new Error(errorText || `Request to ${endpoint} failed with status ${response.status}`);
+    const errorPayload = await parseBody();
+    const message =
+      (typeof errorPayload === 'string' && errorPayload) ||
+      (typeof errorPayload === 'object' && errorPayload && 'message' in errorPayload
+        ? String((errorPayload as any).message)
+        : '') ||
+      `Request to ${endpoint} failed with status ${response.status}`;
+    throw new ApiError(response.status, message, errorPayload);
   }
 
   if (response.status === 204) {
     return null as T;
   }
 
-  const contentType = response.headers.get('content-type') ?? '';
   if (contentType.includes('application/json')) {
-    return response.json() as Promise<T>;
+    return (await parseBody()) as T;
   }
 
   return (response.text() as unknown) as T;

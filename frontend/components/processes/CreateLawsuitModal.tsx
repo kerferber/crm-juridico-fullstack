@@ -3,12 +3,13 @@ import { useProcessModal } from '../../hooks/useProcessModal';
 import { useApp } from '../../store/AppContext';
 import { Button } from '../ui/Button';
 import { Loader2, X, Briefcase } from 'lucide-react';
+import ContactSearchInput from '../contacts/ContactSearchInput';
 
 const AREA_OPTIONS: Array<'Cível' | 'Trabalhista' | 'Previdenciário'> = ['Cível', 'Trabalhista', 'Previdenciário'];
 const STATUS_OPTIONS: Array<'Ativo' | 'Fechado' | 'Arquivado'> = ['Ativo', 'Fechado', 'Arquivado'];
 
 const CreateLawsuitModal: React.FC = () => {
-  const { isOpen, close } = useProcessModal();
+  const { isOpen, close, defaults } = useProcessModal();
   const { contacts, users, addLawsuit } = useApp();
 
   const [internalNumber, setInternalNumber] = useState('');
@@ -21,8 +22,14 @@ const CreateLawsuitModal: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const defaultClientId = useMemo(() => contacts[0]?.id ?? '', [contacts]);
-  const defaultResponsibleId = useMemo(() => users[0]?.id ?? '', [users]);
+  const defaultClientId = useMemo(
+    () => defaults?.clientId ?? contacts[0]?.id ?? '',
+    [contacts, defaults]
+  );
+  const defaultResponsibleId = useMemo(
+    () => defaults?.responsibleId ?? users[0]?.id ?? '',
+    [users, defaults]
+  );
 
   useEffect(() => {
     if (isOpen) {
@@ -47,10 +54,30 @@ const CreateLawsuitModal: React.FC = () => {
     return undefined;
   }, [isOpen, close, defaultClientId, defaultResponsibleId]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    if (!responsibleId && typeof clientId === 'number') {
+      const relatedContact = contacts.find(contact => contact.id === clientId);
+      if (relatedContact?.ownerId) {
+        setResponsibleId(relatedContact.ownerId);
+      }
+    }
+  }, [clientId, contacts, responsibleId, isOpen]);
+
   if (!isOpen) return null;
 
   const handleClose = () => {
     close();
+  };
+
+  const handleSelectClient = (id: number | '') => {
+    setClientId(id);
+    if (id) {
+      const selected = contacts.find(contact => contact.id === id);
+      if (selected?.ownerId) {
+        setResponsibleId(selected.ownerId);
+      }
+    }
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -171,24 +198,21 @@ const CreateLawsuitModal: React.FC = () => {
                 ))}
               </select>
             </label>
-            <label className="flex flex-col gap-1 text-xs font-medium">
-              Cliente
-              <select
-                value={clientId}
-                onChange={e => setClientId(Number(e.target.value))}
-                className="rounded-md border border-border/60 bg-transparent px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-dark-border/60"
-              >
-                <option value="" disabled>Selecione</option>
-                {contacts.map(contact => (
-                  <option key={contact.id} value={contact.id}>{contact.name}</option>
-                ))}
-              </select>
-            </label>
+            <ContactSearchInput
+              label="Cliente"
+              contacts={contacts}
+              value={clientId}
+              onSelect={handleSelectClient}
+              helperText="Busque pelo nome, e-mail ou documento do cliente."
+            />
             <label className="flex flex-col gap-1 text-xs font-medium">
               Responsável
               <select
                 value={responsibleId}
-                onChange={e => setResponsibleId(Number(e.target.value))}
+                onChange={e => {
+                  const value = e.target.value;
+                  setResponsibleId(value ? Number(value) : '');
+                }}
                 className="rounded-md border border-border/60 bg-transparent px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-dark-border/60"
               >
                 <option value="" disabled>Selecione</option>

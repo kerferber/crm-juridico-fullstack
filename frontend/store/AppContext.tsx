@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, Contact, Lawsuit, Task, KanbanCard, CalendarEvent, Transaction, KanbanColumn, KanbanPhase, TaskStatus, TransactionType } from '../types/types';
 import dayjs from 'dayjs';
-import { apiClient, isUsingMockApi } from '../services/api';
+import { ApiError, apiClient, isUsingMockApi } from '../services/api';
+import { useAuth } from './AuthContext';
 
 type ApiCollection<T> = T[] | { data: T[] };
 
@@ -32,6 +33,11 @@ const ensureNumber = (value: any, fallback = 0): number => {
 const ensureOptionalNumber = (value: any): number | undefined => {
   const num = Number(value);
   return Number.isFinite(num) ? num : undefined;
+};
+
+const optionalString = (value: any): string | undefined => {
+  const normalized = ensureString(value);
+  return normalized ? normalized : undefined;
 };
 
 const avatarFallback = (name: string) =>
@@ -77,6 +83,20 @@ const mapUserFromApi = (raw: any): User => {
     id: ensureNumber(raw?.id),
     name,
     avatar: ensureString(raw?.avatar, avatarFallback(name)),
+    email: ensureString(raw?.email),
+    jobTitle: optionalString(raw?.jobTitle ?? raw?.job_title),
+    personalEmail: optionalString(raw?.personalEmail ?? raw?.personal_email),
+    phone: optionalString(raw?.phone),
+    secondaryPhone: optionalString(raw?.secondaryPhone ?? raw?.secondary_phone),
+    whatsapp: optionalString(raw?.whatsapp),
+    address: optionalString(raw?.address),
+    city: optionalString(raw?.city),
+    state: optionalString(raw?.state),
+    postalCode: optionalString(raw?.postalCode ?? raw?.postal_code),
+    birthdate: optionalString(raw?.birthdate),
+    linkedinUrl: optionalString(raw?.linkedinUrl ?? raw?.linkedin_url),
+    instagramUrl: optionalString(raw?.instagramUrl ?? raw?.instagram_url),
+    bio: optionalString(raw?.bio),
   };
 };
 
@@ -213,6 +233,13 @@ interface AppContextType {
     profession: string;
     lastInteraction?: string;
   }) => Promise<Contact>;
+  createCollaborator: (data: {
+    name: string;
+    email: string;
+    password: string;
+    avatar?: string;
+  }) => Promise<User>;
+  updateUserCache: (user: User) => void;
   addLawsuit: (data: {
     internalNumber: string;
     area: Lawsuit['area'];
@@ -237,6 +264,7 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider = ({ children }: { children: React.ReactNode }) => {
+  const { isAuthenticated, loading: authLoading, logout } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [lawsuits, setLawsuits] = useState<Lawsuit[]>([]);
@@ -248,6 +276,19 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let isCancelled = false;
+
+    const resetState = () => {
+      setUsers([]);
+      setContacts([]);
+      setLawsuits([]);
+      setTasks([]);
+      setKanbanCards([]);
+      setCalendarEvents([]);
+      setTransactions([]);
+      setError(null);
+    };
+
     const fetchData = async () => {
       setLoading(true);
       try {
@@ -269,6 +310,8 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
           isUsingMockApi ? apiClient.get('/kanban-cards') : Promise.resolve(null),
         ]);
 
+        if (isCancelled) return;
+
         const lawsuitsRawList = toArray<any>(lawsuitsRaw);
         const lawsuitsList = lawsuitsRawList.map(mapLawsuitFromApi);
 
@@ -286,14 +329,42 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
         setError(null);
       } catch (err) {
         console.error(err);
-        setError('Falha ao carregar os dados do servidor. Verifique sua conexão e autenticação.');
+        if (err instanceof ApiError && (err.status === 401 || err.status === 419)) {
+          await logout();
+          if (!isCancelled) {
+            resetState();
+            setError('Sua sessão expirou. Faça login novamente.');
+          }
+        } else if (!isCancelled) {
+          setError('Falha ao carregar os dados do servidor. Verifique sua conexão e autenticação.');
+        }
       } finally {
-        setLoading(false);
+        if (!isCancelled) {
+          setLoading(false);
+        }
       }
     };
 
+    if (authLoading) {
+      return () => {
+        isCancelled = true;
+      };
+    }
+
+    if (!isAuthenticated) {
+      resetState();
+      setLoading(false);
+      return () => {
+        isCancelled = true;
+      };
+    }
+
     fetchData();
-  }, []);
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [authLoading, isAuthenticated, logout]);
 
   const updateKanbanCardColumn = async (cardId: string, newColumn: KanbanColumn, newPhase: KanbanPhase) => {
     const lawsuitId = extractLawsuitIdFromCard(cardId);
@@ -622,6 +693,57 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  const createCollaborator = async (data: {
+    name: string;
+    email: string;
+    password: string;
+    avatar?: string;
+  }): Promise<User> => {
+    try {
+      if (isUsingMockApi) {
+        const newUser: User = {
+          id: Math.max(...users.map(u => u.id), 0) + 1,
+          name: data.name,
+          email: data.email,
+          avatar: data.avatar ?? avatarFallback(data.name),
+          personalEmail: data.email,
+        };
+        setUsers(prev => [...prev, newUser]);
+        setError(null);
+        return newUser;
+      }
+
+      const payload = {
+        name: data.name,
+        email: data.email,
+        password: data.password,
+        avatar: data.avatar,
+        personal_email: data.email,
+      };
+
+      const created = await apiClient.post('/users', payload);
+      const mapped = mapUserFromApi(created);
+      setUsers(prev => [...prev, mapped]);
+      setError(null);
+      return mapped;
+    } catch (err) {
+      console.error(err);
+      if (err instanceof ApiError && err.status === 422) {
+        throw err;
+      }
+      setError('Não foi possível cadastrar o colaborador.');
+      throw err;
+    }
+  };
+
+  const updateUserCache = (userData: User) => {
+    setUsers(prev =>
+      prev.some(user => user.id === userData.id)
+        ? prev.map(user => (user.id === userData.id ? { ...user, ...userData } : user))
+        : prev
+    );
+  };
+
   const addLawsuit = async (data: {
     internalNumber: string;
     area: Lawsuit['area'];
@@ -740,6 +862,8 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     addTask,
     addKanbanCard,
     addContact,
+    createCollaborator,
+    updateUserCache,
     addLawsuit,
     addTransaction,
   };

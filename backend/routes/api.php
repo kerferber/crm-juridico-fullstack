@@ -21,7 +21,7 @@ Route::prefix('auth')->group(function () {
 });
 
 $registerProtectedRoutes = function () {
-    Route::apiResource('users', UserController::class)->only(['index','show','update','destroy']);
+    Route::apiResource('users', UserController::class)->only(['index','show','store','update','destroy']);
     Route::apiResource('contacts', ContactController::class);
     Route::apiResource('lawsuits', LawsuitController::class);
     Route::put('lawsuits/{id}/kanban', [LawsuitController::class, 'updateKanban']);
