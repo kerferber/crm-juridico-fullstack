@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import dayjs from 'dayjs';
 import { Button } from '../ui/Button';
-import { Loader2, ClipboardList, X } from 'lucide-react';
+import { Loader2, ClipboardList, X, CheckCircle } from 'lucide-react';
 import { useTaskModal } from '../../hooks/useTaskModal';
 import { useApp } from '../../store/AppContext';
 import { TaskStatus } from '../../types/types';
@@ -9,8 +9,8 @@ import { TaskStatus } from '../../types/types';
 const STATUS_OPTIONS = [TaskStatus.Pendente, TaskStatus.Atrasada, TaskStatus.Concluida];
 
 const CreateTaskModal: React.FC = () => {
-  const { isOpen, close } = useTaskModal();
-  const { users, lawsuits, contacts, addTask } = useApp();
+  const { isOpen, mode, task, defaults, close } = useTaskModal();
+  const { users, lawsuits, contacts, addTask, updateTask, updateTaskStatus } = useApp();
 
   const [title, setTitle] = useState('');
   const [dueDate, setDueDate] = useState('');
@@ -21,40 +21,70 @@ const CreateTaskModal: React.FC = () => {
   const [contactId, setContactId] = useState<number | ''>('');
   const [score, setScore] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCompleting, setIsCompleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const defaultResponsibleId = useMemo(() => users[0]?.id ?? '', [users]);
   const today = dayjs().format('YYYY-MM-DD');
 
   useEffect(() => {
-    if (isOpen) {
-      setTitle('');
-      setDueDate(today);
-      setDeadline(today);
-      setStatus(TaskStatus.Pendente);
-      setResponsibleId(defaultResponsibleId);
-      setLawsuitId('');
-      setContactId('');
-      setScore(0);
-      setError(null);
-      document.body.classList.add('overflow-hidden');
-      const handleEsc = (event: KeyboardEvent) => {
-        if (event.key === 'Escape') close();
-      };
-      window.addEventListener('keydown', handleEsc);
-      return () => {
-        window.removeEventListener('keydown', handleEsc);
-        document.body.classList.remove('overflow-hidden');
-      };
+    if (!isOpen) {
+      return undefined;
     }
-    return undefined;
-  }, [isOpen, close, defaultResponsibleId, today]);
+
+    const formatInputDate = (value?: string) =>
+      value && dayjs(value).isValid() ? dayjs(value).format('YYYY-MM-DD') : today;
+
+    if (mode === 'edit' && task) {
+      setTitle(task.title);
+      setDueDate(formatInputDate(task.dueDate));
+      setDeadline(formatInputDate(task.deadline));
+      setStatus(task.status);
+      setResponsibleId(task.responsibleId ?? defaultResponsibleId ?? '');
+      setLawsuitId(task.lawsuitId ?? '');
+      setContactId(task.clientId ?? '');
+      setScore(task.score ?? 0);
+    } else {
+      setTitle(defaults?.title ?? '');
+      setDueDate(formatInputDate(defaults?.dueDate));
+      setDeadline(formatInputDate(defaults?.deadline));
+      setStatus(defaults?.status ?? TaskStatus.Pendente);
+      setResponsibleId(defaults?.responsibleId ?? defaultResponsibleId ?? '');
+      setLawsuitId(defaults?.lawsuitId ?? '');
+      setContactId(defaults?.clientId ?? '');
+      setScore(defaults?.score ?? 0);
+    }
+
+    setError(null);
+    setIsSubmitting(false);
+    setIsCompleting(false);
+    document.body.classList.add('overflow-hidden');
+
+    const handleEsc = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') close();
+    };
+
+    window.addEventListener('keydown', handleEsc);
+    return () => {
+      window.removeEventListener('keydown', handleEsc);
+      document.body.classList.remove('overflow-hidden');
+    };
+  }, [isOpen, mode, task, defaults, close, defaultResponsibleId, today]);
 
   if (!isOpen) return null;
 
+  const modalTitle = mode === 'edit' ? 'Editar tarefa' : 'Nova tarefa';
+  const modalDescription =
+    mode === 'edit'
+      ? 'Atualize os detalhes ou conclua a tarefa rapidamente.'
+      : 'Defina os detalhes para acompanhar suas entregas.';
+  const submitLabel = mode === 'edit' ? 'Salvar alterações' : 'Salvar tarefa';
+  const isActionDisabled = isSubmitting || isCompleting;
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!title.trim()) {
+    const trimmedTitle = title.trim();
+    if (!trimmedTitle) {
       setError('Informe o título da tarefa.');
       return;
     }
@@ -74,8 +104,8 @@ const CreateTaskModal: React.FC = () => {
     setIsSubmitting(true);
     setError(null);
     try {
-      await addTask({
-        title: title.trim(),
+      const payload = {
+        title: trimmedTitle,
         dueDate,
         deadline,
         responsibleId: Number(responsibleId),
@@ -83,12 +113,32 @@ const CreateTaskModal: React.FC = () => {
         clientId: contactId ? Number(contactId) : undefined,
         score,
         status,
-      });
+      };
+
+      if (mode === 'edit' && task) {
+        await updateTask(task.id, payload);
+      } else {
+        await addTask(payload);
+      }
       close();
     } catch (err) {
-      setError('Não foi possível criar a tarefa.');
+      setError(mode === 'edit' ? 'Não foi possível atualizar a tarefa.' : 'Não foi possível criar a tarefa.');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleMarkAsDone = async () => {
+    if (!task) return;
+    setIsCompleting(true);
+    setError(null);
+    try {
+      await updateTaskStatus(task.id, TaskStatus.Concluida);
+      close();
+    } catch (err) {
+      setError('Não foi possível concluir a tarefa.');
+    } finally {
+      setIsCompleting(false);
     }
   };
 
@@ -106,8 +156,8 @@ const CreateTaskModal: React.FC = () => {
               <ClipboardList className="h-5 w-5" />
             </div>
             <div>
-              <h2 className="text-[18px] font-semibold">Nova Tarefa</h2>
-              <p className="text-xs text-muted-foreground">Defina os detalhes para acompanhar suas entregas.</p>
+              <h2 className="text-[18px] font-semibold capitalize">{modalTitle}</h2>
+              <p className="text-xs text-muted-foreground">{modalDescription}</p>
             </div>
           </div>
           <Button variant="ghost" size="icon" onClick={handleClose}>
@@ -162,7 +212,7 @@ const CreateTaskModal: React.FC = () => {
               Responsável
               <select
                 value={responsibleId}
-                onChange={e => setResponsibleId(Number(e.target.value))}
+                onChange={e => setResponsibleId(e.target.value ? Number(e.target.value) : '')}
                 className="rounded-md border border-border/60 bg-transparent px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-dark-border/60"
               >
                 <option value="" disabled>Selecione</option>
@@ -209,20 +259,40 @@ const CreateTaskModal: React.FC = () => {
             </label>
           </div>
 
-          <div className="flex flex-col-reverse gap-3 border-t border-border/60 pt-4 dark:border-dark-border/60 sm:flex-row sm:items-center sm:justify-between">
-            <Button variant="ghost" type="button" onClick={handleClose} disabled={isSubmitting}>Cancelar</Button>
-            <div className="flex items-center gap-2">
-              <select
-                value={status}
-                onChange={e => setStatus(e.target.value as TaskStatus)}
-                className="hidden"
-              ></select>
-              <Button type="submit" disabled={isSubmitting}>
+          <div className="flex flex-col gap-3 border-t border-border/60 pt-4 dark:border-dark-border/60 sm:flex-row sm:items-center sm:justify-between">
+            <Button variant="ghost" type="button" onClick={handleClose} disabled={isActionDisabled}>
+              Cancelar
+            </Button>
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:gap-3">
+              {mode === 'edit' && task?.status !== TaskStatus.Concluida && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleMarkAsDone}
+                  disabled={isActionDisabled}
+                  className="flex items-center gap-2"
+                >
+                  {isCompleting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Concluindo...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="h-4 w-4" />
+                      Concluir tarefa
+                    </>
+                  )}
+                </Button>
+              )}
+              <Button type="submit" disabled={isActionDisabled}>
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Salvando...
                   </>
-                ) : 'Salvar tarefa'}
+                ) : (
+                  submitLabel
+                )}
               </Button>
             </div>
           </div>

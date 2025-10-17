@@ -71,10 +71,12 @@ export interface Task {
 export interface KanbanCard {
   id: string;
   title: string;
+  description?: string;
   column: KanbanColumn;
   phase: KanbanPhase;
   area: 'Cível' | 'Trabalhista' | 'Previdenciário' | 'Não definido';
   responsibleId: number;
+  deadline?: string;
   hasAttachments: boolean;
   commentsCount: number;
   hasReminder: boolean;

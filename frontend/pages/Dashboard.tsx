@@ -8,6 +8,7 @@ import { UpcomingDeadlinesCard } from '../components/dashboard/UpcomingDeadlines
 import { GamificationSummaryCard } from '../components/dashboard/GamificationSummaryCard';
 import { TeamGoalCard } from '../components/dashboard/TeamGoalCard';
 import { AnimatedNumber } from '../components/ui/AnimatedNumber';
+import TaskWorkspace from '../components/dashboard/TaskWorkspace';
 import dayjs from 'dayjs';
 import { Spinner } from '../components/ui/Spinner';
 
@@ -136,6 +137,8 @@ const Dashboard: React.FC = () => {
                     <UpcomingDeadlinesCard />
                 </div>
             </div>
+
+            <TaskWorkspace />
         </div>
     );
 };

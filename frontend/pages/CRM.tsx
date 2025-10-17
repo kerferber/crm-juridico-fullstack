@@ -1,19 +1,35 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
+import dayjs from 'dayjs';
 import { useApp } from '../store/AppContext';
-import { KanbanCard as KanbanCardType, KanbanColumn, KanbanPhase, User } from '../types/types';
+import { KanbanCard as KanbanCardType, KanbanColumn, KanbanPhase } from '../types/types';
 import { Card, CardContent, CardHeader } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
-import { Plus, Paperclip, MessageSquare, Bell, MoreHorizontal, Briefcase } from 'lucide-react';
+import { Plus, Paperclip, MessageSquare, Bell, MoreHorizontal, Briefcase, CalendarDays } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { useKanbanCardModal } from '../hooks/useKanbanCardModal';
 
 interface DraggableKanbanCardProps {
   card: KanbanCardType;
-  users: User[];
+  onOpen: (card: KanbanCardType) => void;
 }
 
-const DraggableKanbanCard: React.FC<DraggableKanbanCardProps> = ({ card, users }) => {
-  const responsible = users.find(u => u.id === card.responsibleId);
+const areaStyles: Record<KanbanCardType['area'], string> = {
+  'Cível': 'bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-500/15 dark:text-blue-200 dark:border-blue-400/30',
+  'Trabalhista': 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-500/15 dark:text-emerald-200 dark:border-emerald-400/30',
+  'Previdenciário': 'bg-purple-50 text-purple-600 border-purple-100 dark:bg-purple-500/15 dark:text-purple-200 dark:border-purple-400/30',
+  'Não definido': 'bg-slate-50 text-slate-600 border-slate-100 dark:bg-slate-500/15 dark:text-slate-200 dark:border-slate-400/30',
+};
+
+const DraggableKanbanCard: React.FC<DraggableKanbanCardProps> = ({ card, onOpen }) => {
   const [isDragging, setIsDragging] = useState(false);
+  const descriptionPreview = useMemo(() => {
+    if (!card.description) return '';
+    const trimmed = card.description.trim();
+    if (!trimmed) return '';
+    if (trimmed.length <= 140) return trimmed;
+    return `${trimmed.slice(0, 137)}...`;
+  }, [card.description]);
+  const formattedDeadline = card.deadline ? dayjs(card.deadline).format('DD/MM/YYYY') : null;
 
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>) => {
     e.dataTransfer.setData("cardId", card.id);
@@ -24,42 +40,113 @@ const DraggableKanbanCard: React.FC<DraggableKanbanCardProps> = ({ card, users }
     setIsDragging(false);
   };
 
+  const handleClick = () => {
+    if (!isDragging) {
+      onOpen(card);
+    }
+  };
+
   return (
     <Card 
       className={cn(
-        "mb-4 cursor-grab active:cursor-grabbing transition-all duration-300 ease-in-out",
-        // SUGESTÃO 1: Borda pulsante para cards atrasados
-        card.isDelayed && "border-red-500 border-2 animate-pulse",
-        // SUGESTÃO 2: Efeito no card ao ser arrastado
-        isDragging && "opacity-50 shadow-2xl rotate-3"
+        "group mb-4 cursor-grab overflow-hidden rounded-2xl border border-border/40 bg-gradient-to-br from-white/90 via-white to-indigo-50/25 shadow-sm transition-all duration-300 ease-out active:cursor-grabbing dark:border-dark-border/60 dark:from-dark-card/95 dark:via-dark-card/90 dark:to-indigo-500/10",
+        card.isDelayed && "border-red-300/70 shadow-[0_14px_28px_-18px_rgba(239,68,68,0.8)] dark:border-red-400/60",
+        isDragging && "rotate-1 scale-[0.99] shadow-xl",
       )}
       draggable
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
+      onClick={handleClick}
     >
-      <CardHeader className="p-4">
-        <div className="flex justify-between items-start">
-            <span className="text-sm font-semibold">{card.title}</span>
-            <button className="text-muted-foreground"><MoreHorizontal size={16} /></button>
+      <CardHeader className="space-y-3 p-4 pb-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="space-y-2">
+            <p className="text-sm font-semibold leading-tight text-foreground transition-colors group-hover:text-primary dark:text-dark-foreground">
+              {card.title}
+            </p>
+            <span
+              className={cn(
+                "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium uppercase tracking-wide shadow-sm transition-colors",
+                areaStyles[card.area]
+              )}
+            >
+              <Briefcase size={12} />
+              {card.area}
+            </span>
+          </div>
+          <button
+            className="rounded-full bg-transparent p-1 text-muted-foreground transition hover:bg-muted/60 hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 dark:hover:bg-dark-border/40"
+            onClick={event => event.stopPropagation()}
+            aria-label="Opções do card"
+          >
+            <MoreHorizontal size={18} />
+          </button>
         </div>
-        <div className={cn("text-xs px-2 py-0.5 rounded-full w-fit", 
-            card.area === 'Cível' ? 'bg-blue-100 text-blue-800' : 
-            card.area === 'Trabalhista' ? 'bg-green-100 text-green-800' : 'bg-purple-100 text-purple-800'
-        )}>
-            <div className="flex items-center gap-1">
-              <Briefcase size={12}/> {card.area}
-            </div>
-        </div>
+        {descriptionPreview && (
+          <p
+            className="text-xs leading-relaxed text-muted-foreground/80"
+            style={{
+              display: '-webkit-box',
+              WebkitLineClamp: 3,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+            }}
+          >
+            {descriptionPreview}
+          </p>
+        )}
       </CardHeader>
-      <CardContent className="p-4 flex justify-between items-center">
-        <div className="flex items-center space-x-2 text-muted-foreground">
-          {card.hasAttachments && <Paperclip size={14} />}
-          {card.commentsCount > 0 && <div className="flex items-center"><MessageSquare size={14} /><span className="text-xs ml-1">{card.commentsCount}</span></div>}
-          {card.hasReminder && <Bell size={14} />}
-          {/* O ponto vermelho original foi mantido, a borda pulsante é um adicional */}
-          {card.isDelayed && <div className="w-2 h-2 bg-red-500 rounded-full" title="Atrasado"></div>}
+      <CardContent className="flex flex-col gap-3 border-t border-border/40 bg-white/70 p-4 pt-3 dark:border-dark-border/40 dark:bg-dark-card/50">
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          {formattedDeadline && (
+            <div
+              className={cn(
+                'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-semibold transition-colors',
+                card.isDelayed
+                  ? 'bg-red-50 text-red-600 dark:bg-red-500/15 dark:text-red-300'
+                  : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-200'
+              )}
+            >
+              <CalendarDays size={14} />
+              {formattedDeadline}
+            </div>
+          )}
+          {card.isDelayed && !formattedDeadline && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2.5 py-1 font-semibold text-red-600 dark:bg-red-500/15 dark:text-red-300">
+              <CalendarDays size={14} />
+              Atrasado
+            </span>
+          )}
         </div>
-        {responsible && <img src={responsible.avatar} alt={responsible.name} className="h-6 w-6 rounded-full" title={responsible.name} />}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-[11px] font-medium text-muted-foreground">
+            {card.phase && (
+              <span className="rounded-full bg-primary/10 px-2 py-1 text-primary dark:bg-dark-primary/20 dark:text-dark-primary">
+                {card.phase}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-2 text-muted-foreground">
+            {card.hasAttachments && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-muted/40 px-2 py-1 text-[11px] font-medium">
+                <Paperclip size={12} />
+                Arquivo
+              </span>
+            )}
+            {card.commentsCount > 0 && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-muted/40 px-2 py-1 text-[11px] font-medium">
+                <MessageSquare size={12} />
+                {card.commentsCount}
+              </span>
+            )}
+            {card.hasReminder && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-muted/40 px-2 py-1 text-[11px] font-medium">
+                <Bell size={12} />
+                Lembrete
+              </span>
+            )}
+          </div>
+        </div>
       </CardContent>
     </Card>
   );
@@ -68,59 +155,26 @@ const DraggableKanbanCard: React.FC<DraggableKanbanCardProps> = ({ card, users }
 interface QuickAddCardFormProps {
     column: KanbanColumn;
     phase: KanbanPhase;
-    onAdd: (cardData: Omit<KanbanCardType, 'id'>) => void;
 }
 
-const QuickAddCardForm: React.FC<QuickAddCardFormProps> = ({ column, phase, onAdd }) => {
-    const [isAdding, setIsAdding] = useState(false);
-    const [title, setTitle] = useState('');
-
-    const handleSave = () => {
-        if (title.trim()) {
-            onAdd({
-                title: title.trim(),
-                column,
-                phase,
-                area: 'Não definido',
-                responsibleId: 1, // Default to current user
-                hasAttachments: false,
-                commentsCount: 0,
-                hasReminder: false,
-                isDelayed: false,
-            });
-            setTitle('');
-            setIsAdding(false);
-        }
-    };
-
-    if (!isAdding) {
-        return (
-            <Button variant="ghost" size="sm" className="w-full mt-2" onClick={() => setIsAdding(true)}>
-                <Plus size={14} className="mr-2" /> Adicionar Card
-            </Button>
-        );
-    }
-
+const QuickAddCardForm: React.FC<QuickAddCardFormProps> = ({ column, phase }) => {
+    const { openForCreate } = useKanbanCardModal();
     return (
-        <div className="mt-2">
-            <textarea
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Digite o título do card..."
-                className="w-full p-2 text-sm border rounded-md bg-background dark:bg-dark-background focus:ring-ring focus:outline-none"
-                rows={3}
-            />
-            <div className="flex items-center space-x-2 mt-2">
-                <Button size="sm" onClick={handleSave}>Salvar</Button>
-                <Button variant="ghost" size="sm" onClick={() => setIsAdding(false)}>Cancelar</Button>
-            </div>
-        </div>
+        <Button
+            variant="ghost"
+            size="sm"
+            className="w-full mt-2"
+            onClick={() => openForCreate({ column, phase })}
+        >
+            <Plus size={14} className="mr-2" /> Adicionar card
+        </Button>
     );
 };
 
 
 const CRM: React.FC = () => {
-    const { kanbanCards, users, updateKanbanCardColumn, addKanbanCard } = useApp();
+    const { kanbanCards, updateKanbanCardColumn } = useApp();
+    const { openForEdit } = useKanbanCardModal();
     const [activeTab, setActiveTab] = useState<KanbanPhase>(KanbanPhase.Judicial);
     const [draggedOverColumn, setDraggedOverColumn] = useState<KanbanColumn | null>(null); // SUGESTÃO 2
     const tabs = Object.values(KanbanPhase);
@@ -194,10 +248,10 @@ const CRM: React.FC = () => {
                         </h2>
                         <div className="relative -mr-2 flex-grow overflow-y-auto pr-2">
                             {filteredCards.filter(c => c.column === column).map(card => (
-                                <DraggableKanbanCard key={card.id} card={card} users={users} />
+                                <DraggableKanbanCard key={card.id} card={card} onOpen={openForEdit} />
                             ))}
                         </div>
-                        <QuickAddCardForm column={column} phase={activeTab} onAdd={addKanbanCard} />
+                        <QuickAddCardForm column={column} phase={activeTab} />
                     </div>
                 ))}
             </div>

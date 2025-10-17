@@ -1,0 +1,62 @@
+[1mdiff --git a/frontend/App.tsx b/frontend/App.tsx[m
+[1mindex d88d51e..267df2e 100644[m
+[1m--- a/frontend/App.tsx[m
+[1m+++ b/frontend/App.tsx[m
+[36m@@ -24,6 +24,8 @@[m [mimport { ContactModalProvider } from './hooks/useContactModal';[m
+ import { ProcessModalProvider } from './hooks/useProcessModal';[m
+ import { TaskModalProvider } from './hooks/useTaskModal';[m
+ import { TransactionModalProvider } from './hooks/useTransactionModal';[m
+[32m+[m[32mimport { KanbanCardModalProvider } from './hooks/useKanbanCardModal';[m
+[32m+[m[32mimport KanbanCardModal from './components/kanban/KanbanCardModal';[m
+ import CreateContactModal from './components/contacts/CreateContactModal';[m
+ import CreateLawsuitModal from './components/processes/CreateLawsuitModal';[m
+ import CreateTaskModal from './components/tasks/CreateTaskModal';[m
+[36m@@ -55,31 +57,34 @@[m [mconst App: React.FC = () => {[m
+           <ProcessModalProvider>[m
+             <TaskModalProvider>[m
+               <TransactionModalProvider>[m
+[31m-                <CommandPaletteProvider>[m
+[31m-                  <Router>[m
+[31m-                    <CommandPalette />[m
+[31m-                    <CreateContactModal />[m
+[31m-                    <CreateLawsuitModal />[m
+[31m-                    <CreateTaskModal />[m
+[31m-                    <CreateTransactionModal />[m
+[31m-                    <Routes>[m
+[31m-                      <Route path="/" element={<Layout />}>[m
+[31m-                        <Route index element={<Dashboard />} />[m
+[31m-                        <Route path="crm" element={<CRM />} />[m
+[31m-                        <Route path="contatos" element={<Contacts />} />[m
+[31m-                        <Route path="contatos/:id" element={<ContactDetail />} />[m
+[31m-                        <Route path="processos" element={<Lawsuits />} />[m
+[31m-                        <Route path="processos/:id" element={<LawsuitDetail />} />[m
+[31m-                        <Route path="tarefas" element={<Tasks />} />[m
+[31m-                        <Route path="agenda" element={<Agenda />} />[m
+[31m-                        <Route path="financeiro" element={<Financial />} />[m
+[31m-                        <Route path="gestao" element={<Management />} />[m
+[31m-                        <Route path="gamificacao" element={<Gamification />} />[m
+[31m-                        <Route path="config" element={<Settings />} />[m
+[31m-                      </Route>[m
+[31m-                    </Routes>[m
+[31m-                  </Router>[m
+[31m-                </CommandPaletteProvider>[m
+[32m+[m[32m                <KanbanCardModalProvider>[m
+[32m+[m[32m                  <CommandPaletteProvider>[m
+[32m+[m[32m                    <Router>[m
+[32m+[m[32m                      <CommandPalette />[m
+[32m+[m[32m                      <CreateContactModal />[m
+[32m+[m[32m                      <CreateLawsuitModal />[m
+[32m+[m[32m                      <CreateTaskModal />[m
+[32m+[m[32m                      <CreateTransactionModal />[m
+[32m+[m[32m                      <KanbanCardModal />[m
+[32m+[m[32m                      <Routes>[m
+[32m+[m[32m                        <Route path="/" element={<Layout />}>[m
+[32m+[m[32m                          <Route index element={<Dashboard />} />[m
+[32m+[m[32m                          <Route path="crm" element={<CRM />} />[m
+[32m+[m[32m                          <Route path="contatos" element={<Contacts />} />[m
+[32m+[m[32m                          <Route path="contatos/:id" element={<ContactDetail />} />[m
+[32m+[m[32m                          <Route path="processos" element={<Lawsuits />} />[m
+[32m+[m[32m                          <Route path="processos/:id" element={<LawsuitDetail />} />[m
+[32m+[m[32m                          <Route path="tarefas" element={<Tasks />} />[m
+[32m+[m[32m                          <Route path="agenda" element={<Agenda />} />[m
+[32m+[m[32m                          <Route path="financeiro" eleme

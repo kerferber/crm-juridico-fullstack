@@ -2,13 +2,15 @@ import React from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useApp } from '../store/AppContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
-import { Briefcase, CheckSquare, User, Mail, Phone, ArrowLeft } from 'lucide-react';
+import { User, Mail, Phone, ArrowLeft } from 'lucide-react';
 import { formatDocument, formatDate } from '../lib/utils';
-import { Button } from '../components/ui/Button';
+import TaskShortcutCard from '../components/tasks/TaskShortcutCard';
+import { useTaskModal } from '../hooks/useTaskModal';
 
 const ContactDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { contacts, lawsuits, tasks, users } = useApp();
+  const { openForEdit } = useTaskModal();
   
   const contactId = parseInt(id || '0');
   const contact = contacts.find(c => c.id === contactId);
@@ -69,24 +71,41 @@ const ContactDetail: React.FC = () => {
                   ) : <p className="text-sm text-muted-foreground">Nenhum processo associado.</p>}
               </CardContent>
           </Card>
-          <Card>
-              <CardHeader><CardTitle>Tarefas Associadas ({contactTasks.length})</CardTitle></CardHeader>
-              <CardContent>
-                  {contactTasks.length > 0 ? (
-                    <ul className="space-y-2">
-                       {contactTasks.map(t => (
-                           <li key={t.id} className="flex items-center justify-between rounded-2xl border border-transparent p-2 transition hover:border-border/50 hover:bg-white/70 dark:hover:border-dark-border/60 dark:hover:bg-dark-border/40">
-                               <div>
-                                 <p className="font-medium">{t.title}</p>
-                                 <p className="text-xs text-muted-foreground">Prazo: {formatDate(t.deadline)}</p>
-                               </div>
-                               <span className="text-xs font-semibold">{t.status}</span>
-                           </li>
-                       ))}
-                    </ul>
-                  ) : <p className="text-sm text-muted-foreground">Nenhuma tarefa associada.</p>}
-              </CardContent>
-          </Card>
+          <div className="space-y-6">
+            <Card>
+                <CardHeader><CardTitle>Tarefas Associadas ({contactTasks.length})</CardTitle></CardHeader>
+                <CardContent>
+                    {contactTasks.length > 0 ? (
+                      <ul className="space-y-2">
+                        {contactTasks.map(taskItem => (
+                            <li key={taskItem.id}>
+                              <button
+                                type="button"
+                                onClick={() => openForEdit(taskItem)}
+                                className="flex w-full items-center justify-between rounded-2xl border border-transparent px-3 py-2 text-left transition hover:border-primary/40 hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 dark:hover:border-dark-border/60 dark:hover:bg-dark-border/30"
+                              >
+                                <div>
+                                  <p className="font-medium text-foreground dark:text-dark-foreground">{taskItem.title}</p>
+                                  <p className="text-xs text-muted-foreground">Prazo: {formatDate(taskItem.deadline)}</p>
+                                </div>
+                                <span className="text-xs font-semibold text-muted-foreground">{taskItem.status}</span>
+                              </button>
+                            </li>
+                        ))}
+                      </ul>
+                    ) : <p className="text-sm text-muted-foreground">Nenhuma tarefa associada.</p>}
+                </CardContent>
+            </Card>
+            <TaskShortcutCard
+              heading="Adicionar tarefa vinculada"
+              description="Crie uma nova atividade e mantenha o histórico deste relacionamento sempre atualizado."
+              defaults={{
+                clientId: contact.id,
+                responsibleId: contact.ownerId ?? users[0]?.id,
+              }}
+              ctaLabel="Nova tarefa para este contato"
+            />
+          </div>
       </div>
     </div>
   );

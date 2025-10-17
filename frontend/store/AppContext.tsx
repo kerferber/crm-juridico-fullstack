@@ -139,6 +139,7 @@ const mapTransactionFromApi = (raw: any): Transaction => ({
 const mapKanbanCardFromLawsuit = (raw: any): KanbanCard => {
   const column = normalizeKanbanColumn(raw?.kanbanColumn ?? raw?.kanban_column);
   const deadline = ensureString(raw?.deadline ?? raw?.deadline_at);
+  const description = ensureString(raw?.description ?? raw?.notes);
   return {
     id: `lawsuit-${ensureNumber(raw?.id)}`,
     title: ensureString(
@@ -147,10 +148,12 @@ const mapKanbanCardFromLawsuit = (raw: any): KanbanCard => {
         raw?.internal_number ??
         `Processo #${ensureNumber(raw?.id)}`
     ),
+    description: description || undefined,
     column,
     phase: normalizeKanbanPhase(raw?.kanbanPhase ?? raw?.kanban_phase),
     area: ensureString(raw?.area, 'Não definido') as KanbanCard['area'],
     responsibleId: ensureNumber(raw?.responsibleId ?? raw?.responsible_id),
+    deadline: deadline || undefined,
     hasAttachments: Boolean(raw?.hasAttachments ?? raw?.has_attachments ?? false),
     commentsCount: ensureNumber(raw?.commentsCount ?? raw?.comments_count, 0),
     hasReminder: Boolean(raw?.hasReminder ?? raw?.has_reminder ?? false),
@@ -161,10 +164,12 @@ const mapKanbanCardFromLawsuit = (raw: any): KanbanCard => {
 const mapKanbanCardFromMock = (raw: any): KanbanCard => ({
   id: ensureString(raw?.id),
   title: ensureString(raw?.title),
+  description: ensureString(raw?.description) || undefined,
   column: raw?.column ?? KanbanColumn.Prospeccao,
   phase: raw?.phase ?? KanbanPhase.Judicial,
   area: raw?.area ?? 'Não definido',
   responsibleId: ensureNumber(raw?.responsibleId),
+  deadline: ensureString(raw?.deadline) || undefined,
   hasAttachments: Boolean(raw?.hasAttachments),
   commentsCount: ensureNumber(raw?.commentsCount, 0),
   hasReminder: Boolean(raw?.hasReminder),
@@ -192,7 +197,9 @@ interface AppContextType {
   loading: boolean;
   error: string | null;
   updateKanbanCardColumn: (cardId: string, newColumn: KanbanColumn, newPhase: KanbanPhase) => Promise<void>;
+  updateKanbanCardDetails: (cardId: string, updates: Partial<Omit<KanbanCard, 'id'>>) => Promise<void>;
   updateTaskStatus: (taskId: number, newStatus: TaskStatus) => Promise<void>;
+  updateTask: (taskId: number, data: Partial<Omit<Task, 'id'>>) => Promise<void>;
   addTask: (taskData: Omit<Task, 'id' | 'status'> & { status?: TaskStatus }) => Promise<void>;
   addKanbanCard: (cardData: Omit<KanbanCard, 'id'>) => Promise<void>;
   addContact: (contactData: {
@@ -319,6 +326,85 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  const updateKanbanCardDetails = async (cardId: string, updates: Partial<Omit<KanbanCard, 'id'>>) => {
+    const lawsuitId = extractLawsuitIdFromCard(cardId);
+    const hasDeadlineUpdate = Object.prototype.hasOwnProperty.call(updates, 'deadline');
+    try {
+      if (!isUsingMockApi && lawsuitId) {
+        const payload: Record<string, any> = {};
+
+        if (Object.prototype.hasOwnProperty.call(updates, 'responsibleId')) {
+          payload.responsible_id = updates.responsibleId ?? null;
+        }
+        if (updates.area && updates.area !== 'Não definido') {
+          payload.area = updates.area;
+        }
+        if (Object.prototype.hasOwnProperty.call(updates, 'title') && updates.title) {
+          payload.internal_number = updates.title;
+        }
+        if (hasDeadlineUpdate) {
+          payload.deadline = updates.deadline ? formatDateForApi(updates.deadline) : null;
+        }
+
+        if (Object.keys(payload).length > 0) {
+          const response = await apiClient.put(`/lawsuits/${lawsuitId}`, payload);
+          const mappedLawsuit = mapLawsuitFromApi(response);
+          const mappedCard = mapKanbanCardFromLawsuit(mappedLawsuit);
+
+          setLawsuits(prev =>
+            prev.map(lawsuit => (lawsuit.id === lawsuitId ? mappedLawsuit : lawsuit))
+          );
+
+          setKanbanCards(prev =>
+            prev.map(card =>
+              card.id === cardId
+                ? {
+                    ...mappedCard,
+                    title: updates.title ?? mappedCard.title,
+                    description: updates.description ?? mappedCard.description,
+                    area: updates.area ?? mappedCard.area,
+                    responsibleId: updates.responsibleId ?? mappedCard.responsibleId,
+                    hasAttachments: updates.hasAttachments ?? mappedCard.hasAttachments,
+                    hasReminder: updates.hasReminder ?? mappedCard.hasReminder,
+                    commentsCount: updates.commentsCount ?? mappedCard.commentsCount,
+                    isDelayed: updates.isDelayed ?? mappedCard.isDelayed,
+                    deadline: hasDeadlineUpdate ? updates.deadline ?? undefined : mappedCard.deadline,
+                  }
+                : card
+            )
+          );
+        } else {
+          setKanbanCards(prev =>
+            prev.map(card =>
+              card.id === cardId
+                ? {
+                    ...card,
+                    ...updates,
+                  }
+                : card
+            )
+          );
+        }
+      } else {
+        setKanbanCards(prev =>
+          prev.map(card =>
+            card.id === cardId
+              ? {
+                  ...card,
+                  ...updates,
+                }
+              : card
+          )
+        );
+      }
+      setError(null);
+    } catch (err) {
+      console.error(err);
+      setError('Não foi possível atualizar os detalhes do card.');
+      throw err;
+    }
+  };
+
   const updateTaskStatus = async (taskId: number, newStatus: TaskStatus) => {
     try {
       let updatedTask: Task | null = null;
@@ -337,6 +423,54 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     } catch (err) {
       console.error(err);
       setError('Não foi possível atualizar o status da tarefa no backend.');
+      throw err;
+    }
+  };
+
+  const updateTask = async (taskId: number, data: Partial<Omit<Task, 'id'>>) => {
+    try {
+      if (isUsingMockApi) {
+        setTasks(prev =>
+          prev.map(task => (task.id === taskId ? { ...task, ...data } : task))
+        );
+        return;
+      }
+
+      const payload: Record<string, any> = {};
+      if (Object.prototype.hasOwnProperty.call(data, 'title')) {
+        payload.title = data.title;
+      }
+      if (Object.prototype.hasOwnProperty.call(data, 'status')) {
+        payload.status = data.status;
+      }
+      if (Object.prototype.hasOwnProperty.call(data, 'score')) {
+        payload.score = data.score;
+      }
+      if (Object.prototype.hasOwnProperty.call(data, 'dueDate')) {
+        const dueDate = data.dueDate;
+        payload.due_date = dueDate ? formatDateForApi(dueDate) : null;
+      }
+      if (Object.prototype.hasOwnProperty.call(data, 'deadline')) {
+        const deadline = data.deadline;
+        payload.deadline = deadline ? formatDateForApi(deadline) : null;
+      }
+      if (Object.prototype.hasOwnProperty.call(data, 'responsibleId')) {
+        payload.responsible_id = data.responsibleId;
+      }
+      if (Object.prototype.hasOwnProperty.call(data, 'lawsuitId')) {
+        payload.lawsuit_id = data.lawsuitId ?? null;
+      }
+      if (Object.prototype.hasOwnProperty.call(data, 'clientId')) {
+        payload.client_id = data.clientId ?? null;
+      }
+
+      const response = await apiClient.put(`/tasks/${taskId}`, payload);
+      const mapped = mapTaskFromApi(response);
+      setTasks(prev => prev.map(task => (task.id === taskId ? mapped : task)));
+      setError(null);
+    } catch (err) {
+      console.error(err);
+      setError('Não foi possível atualizar a tarefa.');
       throw err;
     }
   };
@@ -400,11 +534,13 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
         throw new Error('Nenhum contato disponível para vincular ao processo.');
       }
 
+      const rawDeadline = cardData.deadline ?? dayjs().add(30, 'day').toISOString();
+
       const payload = {
         internal_number: `CARD-${Date.now()}`,
         area: cardData.area === 'Não definido' ? 'Cível' : cardData.area,
         phase: 'Inicial',
-        deadline: formatDateForApi(dayjs().add(30, 'day').toISOString()),
+        deadline: formatDateForApi(rawDeadline),
         status: 'Ativo',
         client_id: defaultClientId,
         responsible_id: cardData.responsibleId || defaultResponsibleId,
@@ -423,6 +559,12 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
           ...mappedCard,
           title: cardData.title || mappedCard.title,
           area: cardData.area,
+          description: cardData.description ?? mappedCard.description,
+          deadline: cardData.deadline ?? mappedCard.deadline,
+          hasAttachments: cardData.hasAttachments,
+          hasReminder: cardData.hasReminder,
+          commentsCount: cardData.commentsCount,
+          isDelayed: cardData.isDelayed,
         },
       ]);
       setError(null);
@@ -592,7 +734,9 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     loading,
     error,
     updateKanbanCardColumn,
+    updateKanbanCardDetails,
     updateTaskStatus,
+    updateTask,
     addTask,
     addKanbanCard,
     addContact,
