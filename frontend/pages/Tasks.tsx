@@ -156,7 +156,7 @@ const Tasks: React.FC = () => {
 
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
 
-      <Card className="border border-slate-200 bg-white shadow-[0_18px_48px_-38px_rgba(15,23,42,0.3)] dark:border-dark-border/60 dark:bg-dark-card/80">
+      <Card className="w-full border border-slate-200 bg-white shadow-[0_18px_48px_-38px_rgba(15,23,42,0.3)] dark:border-dark-border/60 dark:bg-dark-card/80">
         <CardHeader>
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>

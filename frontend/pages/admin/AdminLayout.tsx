@@ -1,12 +1,13 @@
 import React from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { ShieldCheck, Users, BarChart2, LogOut } from 'lucide-react';
+import { ShieldCheck, Users, BarChart2, LogOut, FileText } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { useAdminAuth } from '../../store/AdminAuthContext';
 
 const navItems = [
   { to: '/admin/dashboard', label: 'Dashboard', icon: BarChart2 },
   { to: '/admin/tenants', label: 'Tenants', icon: Users },
+  { to: '/admin/api-docs', label: 'Documentação', icon: FileText },
 ];
 
 const AdminLayout: React.FC = () => {

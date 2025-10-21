@@ -7,6 +7,27 @@ import { Button } from '../../components/ui/Button';
 
 type StatusOption = 'active' | 'inactive';
 
+type TenantAdminSummary = {
+  id: number;
+  name: string;
+  email: string;
+};
+
+type TenantCreationResponse = Tenant | {
+  tenant: Tenant;
+  admin?: TenantAdminSummary | null;
+};
+
+const isTenantCreationWrapper = (
+  value: unknown
+): value is { tenant: Tenant; admin?: TenantAdminSummary | null } => {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  return 'tenant' in value && typeof (value as { tenant?: unknown }).tenant === 'object';
+};
+
 const toSlug = (value: string): string =>
   value
     .normalize('NFD')
@@ -36,6 +57,11 @@ const AdminTenants: React.FC = () => {
   const [name, setName] = useState('');
   const [slugInput, setSlugInput] = useState('');
   const [status, setStatus] = useState<StatusOption>('active');
+  const [createAdminAccount, setCreateAdminAccount] = useState(true);
+  const [adminName, setAdminName] = useState('');
+  const [adminEmail, setAdminEmail] = useState('');
+  const [adminPassword, setAdminPassword] = useState('');
+  const [adminPasswordConfirmation, setAdminPasswordConfirmation] = useState('');
 
   const fetchTenants = useCallback(async () => {
     if (!token) {
@@ -90,7 +116,25 @@ const AdminTenants: React.FC = () => {
       return;
     }
 
+    if (createAdminAccount) {
+      if (!adminName.trim() || !adminEmail.trim() || !adminPassword || !adminPasswordConfirmation) {
+        setError('Informe nome, e-mail e senha para o administrador do tenant.');
+        return;
+      }
+
+      if (adminPassword.length < 8) {
+        setError('A senha do administrador deve conter pelo menos 8 caracteres.');
+        return;
+      }
+
+      if (adminPassword !== adminPasswordConfirmation) {
+        setError('A confirmação da senha do administrador não confere.');
+        return;
+      }
+    }
+
     try {
+      setLoading(true);
       const payload: Record<string, unknown> = {
         name: name.trim(),
         status,
@@ -100,12 +144,30 @@ const AdminTenants: React.FC = () => {
         payload.slug = finalSlug;
       }
 
-      const created = await adminApiClient.post<Tenant>('tenants', payload, token);
+      if (createAdminAccount) {
+        payload.admin_name = adminName.trim();
+        payload.admin_email = adminEmail.trim().toLowerCase();
+        payload.admin_password = adminPassword;
+        payload.admin_password_confirmation = adminPasswordConfirmation;
+      }
 
-      setSuccess(`Tenant "${created?.name ?? name}" criado com sucesso (${created?.slug ?? finalSlug}).`);
+      const createdResponse = await adminApiClient.post<TenantCreationResponse>('tenants', payload, token);
+      const createdTenant = isTenantCreationWrapper(createdResponse)
+        ? mapTenantFromApi(createdResponse.tenant)
+        : mapTenantFromApi(createdResponse);
+      const createdAdmin = isTenantCreationWrapper(createdResponse) ? createdResponse.admin ?? null : null;
+
+      const adminInfo = createdAdmin ? ` Administrador criado: ${createdAdmin.email}.` : '';
+      setSuccess(`Tenant "${createdTenant.name}" criado com sucesso (${createdTenant.slug}).${adminInfo}`);
       setName('');
       setSlugInput('');
       setStatus('active');
+      if (createAdminAccount) {
+        setAdminName('');
+        setAdminEmail('');
+        setAdminPassword('');
+        setAdminPasswordConfirmation('');
+      }
 
       await fetchTenants();
     } catch (err) {
@@ -114,14 +176,33 @@ const AdminTenants: React.FC = () => {
           await logout();
           return;
         }
-        const validationMessage =
-          typeof err.data === 'object' && err.data && 'message' in (err.data as any)
-            ? String((err.data as any).message)
-            : err.message;
+        let validationMessage = '';
+
+        if (typeof err.data === 'object' && err.data) {
+          if ('message' in (err.data as Record<string, unknown>)) {
+            validationMessage = String((err.data as Record<string, unknown>).message ?? '');
+          }
+
+          if (!validationMessage && 'errors' in (err.data as Record<string, unknown>)) {
+            const errors = (err.data as { errors?: Record<string, string[] | string> }).errors;
+            if (errors) {
+              const firstError = Object.values(errors).flat().find(Boolean);
+              if (typeof firstError === 'string') {
+                validationMessage = firstError;
+              }
+            }
+          }
+        }
+
+        if (!validationMessage) {
+          validationMessage = err.message;
+        }
         setError(validationMessage || 'Não foi possível criar o tenant.');
       } else {
         setError('Não foi possível criar o tenant. Tente novamente.');
       }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -181,6 +262,84 @@ const AdminTenants: React.FC = () => {
               <option value="inactive">Inativo</option>
             </select>
           </label>
+
+          <div className="space-y-4 rounded-2xl border border-dashed border-border/60 bg-surface/60 p-4 dark:border-dark-border/50 dark:bg-dark-surface/70">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-semibold text-foreground">Conta de administrador</p>
+                <p className="text-xs text-muted-foreground">
+                  Gere credenciais iniciais para acessar o workspace recém-criado.
+                </p>
+              </div>
+              <label className="inline-flex items-center gap-2 text-sm font-medium text-foreground">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-border/70 text-primary focus:ring-primary/40 dark:border-dark-border/60"
+                  checked={createAdminAccount}
+                  onChange={event => setCreateAdminAccount(event.target.checked)}
+                />
+                Gerar credenciais
+              </label>
+            </div>
+
+            {createAdminAccount && (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="space-y-2 text-sm">
+                  <span className="font-medium text-muted-foreground">Nome completo</span>
+                  <input
+                    type="text"
+                    value={adminName}
+                    onChange={event => setAdminName(event.target.value)}
+                    placeholder="Ex: Diego Carvalho"
+                    autoComplete="name"
+                    className="w-full rounded-xl border border-border/70 bg-surface px-4 py-3 text-sm text-foreground shadow-sm outline-none transition focus:border-primary/60 focus:ring-2 focus:ring-primary/30 dark:border-dark-border/60 dark:bg-dark-surface"
+                  />
+                </label>
+
+                <label className="space-y-2 text-sm">
+                  <span className="font-medium text-muted-foreground">E-mail</span>
+                  <input
+                    type="email"
+                    value={adminEmail}
+                    onChange={event => setAdminEmail(event.target.value)}
+                    placeholder="admin@empresa.com"
+                    autoComplete="username"
+                    className="w-full rounded-xl border border-border/70 bg-surface px-4 py-3 text-sm text-foreground shadow-sm outline-none transition focus:border-primary/60 focus:ring-2 focus:ring-primary/30 dark:border-dark-border/60 dark:bg-dark-surface"
+                  />
+                </label>
+
+                <label className="space-y-2 text-sm">
+                  <span className="font-medium text-muted-foreground">Senha</span>
+                  <input
+                    type="password"
+                    value={adminPassword}
+                    onChange={event => setAdminPassword(event.target.value)}
+                    placeholder="Mínimo de 8 caracteres"
+                    minLength={8}
+                    autoComplete="new-password"
+                    className="w-full rounded-xl border border-border/70 bg-surface px-4 py-3 text-sm text-foreground shadow-sm outline-none transition focus:border-primary/60 focus:ring-2 focus:ring-primary/30 dark:border-dark-border/60 dark:bg-dark-surface"
+                  />
+                </label>
+
+                <label className="space-y-2 text-sm">
+                  <span className="font-medium text-muted-foreground">Confirmar senha</span>
+                  <input
+                    type="password"
+                    value={adminPasswordConfirmation}
+                    onChange={event => setAdminPasswordConfirmation(event.target.value)}
+                    placeholder="Repita a senha"
+                    minLength={8}
+                    autoComplete="new-password"
+                    className="w-full rounded-xl border border-border/70 bg-surface px-4 py-3 text-sm text-foreground shadow-sm outline-none transition focus:border-primary/60 focus:ring-2 focus:ring-primary/30 dark:border-dark-border/60 dark:bg-dark-surface"
+                  />
+                </label>
+              </div>
+            )}
+
+            <p className="text-xs text-muted-foreground">
+              O administrador criado terá acesso total ao workspace e poderá convidar novos usuários.
+            </p>
+          </div>
 
           {error && (
             <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">

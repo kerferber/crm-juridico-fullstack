@@ -31,37 +31,42 @@ interface SidebarProps {
   onMobileClose?: () => void;
 }
 
-const primaryNav: NavItem[] = [
-  { to: '/', label: 'Página inicial', icon: Home, accentClass: 'bg-primary/90', exact: true },
-  { to: '/tarefas', label: 'Minhas tarefas', icon: CheckSquare, accentClass: 'bg-emerald-500' },
-  { to: '/agenda', label: 'Caixa de entrada', icon: Inbox, accentClass: 'bg-sky-500' },
-];
-
-const insightNav: NavItem[] = [
-  { to: '/insights', label: 'Insights', icon: Sparkles, accentClass: 'bg-amber-500' },
-  { to: '/gestao', label: 'Relatórios', icon: BarChart3, accentClass: 'bg-primary/80' },
-  { to: '/financeiro', label: 'Portfólios', icon: DollarSign, accentClass: 'bg-indigo-500' },
-  { to: '/gamificacao', label: 'Metas & Gamificação', icon: Trophy, accentClass: 'bg-purple-500' },
-];
-
-const projectNav: NavItem[] = [
-  { to: '/crm', label: 'CRM · Pipeline', icon: LayoutDashboard, accentClass: 'bg-primary' },
-  { to: '/processos', label: 'Processos', icon: Briefcase, accentClass: 'bg-sky-500' },
-  { to: '/contatos', label: 'Contatos', icon: Users, accentClass: 'bg-rose-500' },
+const NAV_SECTIONS: { id: string; title: string; items: NavItem[] }[] = [
+  {
+    id: 'operations',
+    title: 'Operações',
+    items: [
+      { to: '/', label: 'Página inicial', icon: Home, accentClass: 'bg-primary/90', exact: true },
+      { to: '/tarefas', label: 'Minhas tarefas', icon: CheckSquare, accentClass: 'bg-emerald-500' },
+      { to: '/notificacoes', label: 'Caixa de entrada', icon: Inbox, accentClass: 'bg-sky-500' },
+    ],
+  },
+  {
+    id: 'business',
+    title: 'Negócios',
+    items: [
+      { to: '/crm', label: 'CRM · Pipeline', icon: LayoutDashboard, accentClass: 'bg-primary' },
+      { to: '/processos', label: 'Processos', icon: Briefcase, accentClass: 'bg-sky-500' },
+      { to: '/contatos', label: 'Contatos', icon: Users, accentClass: 'bg-rose-500' },
+    ],
+  },
+  {
+    id: 'reports',
+    title: 'Relatórios',
+    items: [
+      { to: '/insights', label: 'Insights', icon: Sparkles, accentClass: 'bg-amber-500' },
+      { to: '/gestao', label: 'Relatórios', icon: BarChart3, accentClass: 'bg-primary/80' },
+      { to: '/financeiro', label: 'Portfólio financeiro', icon: DollarSign, accentClass: 'bg-indigo-500' },
+      { to: '/gamificacao', label: 'Resultados & Gamificação', icon: Trophy, accentClass: 'bg-purple-500' },
+    ],
+  },
 ];
 
 const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen = false, onMobileClose = () => {} }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const isCollapsedDesktop = isCollapsed && !isMobileOpen;
 
-  const sections = useMemo(
-    () => [
-      { id: 'main', title: 'Geral', items: primaryNav },
-      { id: 'insights', title: 'Insights', items: insightNav },
-      { id: 'projects', title: 'Projetos', items: projectNav },
-    ],
-    []
-  );
+  const sections = useMemo(() => NAV_SECTIONS, []);
 
   const handleToggleCollapse = () => setIsCollapsed(prev => !prev);
 

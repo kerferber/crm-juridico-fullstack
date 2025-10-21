@@ -5,6 +5,7 @@ import { useApp } from '../../store/AppContext';
 import { Button } from '../ui/Button';
 import { CategoryItem, MentionReference } from '../../types/types';
 import MentionTextarea from '../inputs/MentionTextarea';
+import { ApiError } from '../../services/api';
 
 type FormState = {
   name: string;
@@ -180,6 +181,30 @@ const CreateContactModal: React.FC = () => {
       return;
     }
 
+    const normalizedDocument = form.document.trim();
+    const normalizedDocumentDigits = normalizedDocument.replace(/\D/g, '');
+    if (normalizedDocument) {
+      const hasDuplicateDocument = contacts.some(existing => {
+        if (!existing.document) {
+          return false;
+        }
+        const existingTrimmed = existing.document.trim();
+        if (existingTrimmed === normalizedDocument) {
+          return true;
+        }
+        if (!normalizedDocumentDigits) {
+          return false;
+        }
+        const existingDigits = existingTrimmed.replace(/\D/g, '');
+        return existingDigits.length > 0 && existingDigits === normalizedDocumentDigits;
+      });
+
+      if (hasDuplicateDocument) {
+        setError('Já existe um contato cadastrado com este documento.');
+        return;
+      }
+    }
+
     setError(null);
     setIsSubmitting(true);
     try {
@@ -189,7 +214,7 @@ const CreateContactModal: React.FC = () => {
           : 'Lead');
       await addContact({
         name: form.name.trim(),
-        document: form.document.trim(),
+        document: normalizedDocument,
         origin: form.origin.trim() || 'Indicação',
         status: normalizedStatus,
         ownerId: Number(form.ownerId),
@@ -205,7 +230,23 @@ const CreateContactModal: React.FC = () => {
       resetForm();
       close();
     } catch (err) {
-      setError('Não foi possível salvar o contato. Tente novamente.');
+      if (err instanceof ApiError) {
+        const duplicate =
+          (err as ApiError & { code?: string }).code === 'contact_document_duplicate' ||
+          err.message?.toLowerCase().includes('contacts_document_unique') ||
+          err.message?.toLowerCase().includes('duplicate entry');
+
+        if (duplicate) {
+          setError('Já existe um contato cadastrado com este documento.');
+        } else if (err.status === 422) {
+          const validationMessage = extractFirstValidationMessage(err.data);
+          setError(validationMessage ?? 'Alguns dados estão inválidos. Revise os campos e tente novamente.');
+        } else {
+          setError('Não foi possível salvar o contato. Tente novamente.');
+        }
+      } else {
+        setError('Não foi possível salvar o contato. Tente novamente.');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -427,3 +468,32 @@ const CreateContactModal: React.FC = () => {
 };
 
 export default CreateContactModal;
+
+function extractFirstValidationMessage(payload: unknown): string | null {
+  if (!payload || typeof payload !== 'object') {
+    return null;
+  }
+
+  const data = payload as Record<string, unknown>;
+
+  if (typeof data.message === 'string' && data.message.trim().length > 0) {
+    return data.message.trim();
+  }
+
+  if (data.errors && typeof data.errors === 'object' && data.errors !== null) {
+    const errors = data.errors as Record<string, unknown>;
+    for (const key of Object.keys(errors)) {
+      const value = errors[key];
+      if (Array.isArray(value) && value.length > 0) {
+        const first = value.find(item => typeof item === 'string' && item.trim().length > 0);
+        if (typeof first === 'string') {
+          return first.trim();
+        }
+      } else if (typeof value === 'string' && value.trim().length > 0) {
+        return value.trim();
+      }
+    }
+  }
+
+  return null;
+}

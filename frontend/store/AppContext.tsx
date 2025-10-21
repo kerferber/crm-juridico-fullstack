@@ -122,6 +122,42 @@ const optionalString = (value: any): string | undefined => {
   return normalized ? normalized : undefined;
 };
 
+const extractMessageFromPayload = (payload: unknown): string => {
+  if (!payload) {
+    return '';
+  }
+
+  if (typeof payload === 'string') {
+    return payload.toLowerCase();
+  }
+
+  if (typeof payload === 'object') {
+    const data = payload as Record<string, unknown>;
+
+    if (typeof data.message === 'string' && data.message.trim()) {
+      return data.message.toLowerCase();
+    }
+
+    if (data.errors && typeof data.errors === 'object' && data.errors !== null) {
+      const errors = data.errors as Record<string, unknown>;
+      for (const key of Object.keys(errors)) {
+        const value = errors[key];
+        if (typeof value === 'string' && value.trim()) {
+          return value.toLowerCase();
+        }
+        if (Array.isArray(value)) {
+          const message = value.find(item => typeof item === 'string' && item.trim());
+          if (typeof message === 'string') {
+            return message.toLowerCase();
+          }
+        }
+      }
+    }
+  }
+
+  return '';
+};
+
 const avatarFallback = (name: string) =>
   `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'Usuário')}&background=random`;
 
@@ -2691,6 +2727,24 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       return enriched;
     } catch (err) {
       console.error(err);
+      if (err instanceof ApiError) {
+        const normalizedMessage = (err.message ?? '').toLowerCase();
+        const payloadMessage = extractMessageFromPayload(err.data);
+        const isDuplicateDocument =
+          normalizedMessage.includes('contacts_document_unique') ||
+          normalizedMessage.includes('duplicate entry') ||
+          payloadMessage.includes('contacts_document_unique') ||
+          payloadMessage.includes('duplicate entry');
+
+        if (isDuplicateDocument) {
+          (err as ApiError & { code?: string }).code = 'contact_document_duplicate';
+          throw err;
+        }
+
+        if (err.status === 422) {
+          throw err;
+        }
+      }
       setError('Não foi possível criar o contato no backend.');
       throw err;
     }
