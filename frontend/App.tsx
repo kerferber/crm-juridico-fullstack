@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { HashRouter as Router, Routes, Route, Outlet, Navigate } from 'react-router-dom';
+import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
 import Sidebar from './components/layout/Sidebar';
 import Header from './components/layout/Header';
 import Dashboard from './pages/Dashboard';
@@ -13,8 +15,11 @@ import Agenda from './pages/Agenda';
 import Financial from './pages/Financial';
 import Management from './pages/Management';
 import Gamification from './pages/Gamification';
+import Insights from './pages/Insights';
 import Settings from './pages/Settings';
+import TaskDetail from './pages/TaskDetail';
 import Profile from './pages/Profile';
+import Notifications from './pages/Notifications';
 import { AppProvider } from './store/AppContext';
 import { ThemeProvider } from './hooks/useTheme';
 import CommandPalette from './components/global/CommandPalette';
@@ -30,8 +35,15 @@ import CreateLawsuitModal from './components/processes/CreateLawsuitModal';
 import CreateTaskModal from './components/tasks/CreateTaskModal';
 import CreateTransactionModal from './components/financial/CreateTransactionModal';
 import { AuthProvider, useAuth } from './store/AuthContext';
+import { AdminAuthProvider, useAdminAuth } from './store/AdminAuthContext';
 import { Spinner } from './components/ui/Spinner';
 import Login from './pages/Login';
+import AdminLogin from './pages/admin/AdminLogin';
+import AdminLayout from './pages/admin/AdminLayout';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminTenants from './pages/admin/AdminTenants';
+
+dayjs.extend(relativeTime);
 
 const Layout: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -54,8 +66,8 @@ const Layout: React.FC = () => {
       <Sidebar isMobileOpen={isSidebarOpen} onMobileClose={handleCloseSidebar} />
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header onToggleSidebar={() => setIsSidebarOpen(true)} />
-        <main className="relative flex-1 overflow-x-hidden overflow-y-auto bg-transparent px-4 py-6 sm:px-5 lg:px-8">
-          <div className="mx-auto flex w-full max-w-6xl flex-col gap-5 pb-8">
+        <main className="relative flex-1 overflow-x-hidden overflow-y-auto bg-surface-muted px-4 py-4 dark:bg-dark-surface-muted sm:px-5 lg:px-7">
+          <div className="mx-auto flex w-full max-w-[1180px] flex-col gap-4 pb-6">
             <Outlet />
           </div>
         </main>
@@ -82,17 +94,28 @@ const ProtectedLayout: React.FC = () => {
   return <Layout />;
 };
 
+const AdminProtectedLayout: React.FC = () => {
+  const { isAuthenticated } = useAdminAuth();
+
+  if (!isAuthenticated) {
+    return <Navigate to="/admin/login" replace />;
+  }
+
+  return <AdminLayout />;
+};
+
 const App: React.FC = () => {
   return (
     <ThemeProvider defaultTheme="light" storageKey="crm-juridico-theme">
-      <AuthProvider>
-        <AppProvider>
-          <ContactModalProvider>
-            <ProcessModalProvider>
-              <TaskModalProvider>
-                <TransactionModalProvider>
-                  <KanbanCardModalProvider>
-                    <CommandPaletteProvider>
+      <AdminAuthProvider>
+        <AuthProvider>
+          <AppProvider>
+            <ContactModalProvider>
+              <ProcessModalProvider>
+                <TaskModalProvider>
+                  <TransactionModalProvider>
+                    <KanbanCardModalProvider>
+                      <CommandPaletteProvider>
                       <Router>
                         <CommandPalette />
                         <CreateContactModal />
@@ -102,6 +125,12 @@ const App: React.FC = () => {
                         <KanbanCardModal />
                         <Routes>
                           <Route path="/login" element={<Login />} />
+                          <Route path="/admin/login" element={<AdminLogin />} />
+                          <Route path="/admin" element={<AdminProtectedLayout />}>
+                            <Route index element={<Navigate to="/admin/dashboard" replace />} />
+                            <Route path="dashboard" element={<AdminDashboard />} />
+                            <Route path="tenants" element={<AdminTenants />} />
+                          </Route>
                           <Route path="/" element={<ProtectedLayout />}>
                             <Route index element={<Dashboard />} />
                             <Route path="crm" element={<CRM />} />
@@ -110,8 +139,11 @@ const App: React.FC = () => {
                             <Route path="processos" element={<Lawsuits />} />
                             <Route path="processos/:id" element={<LawsuitDetail />} />
                             <Route path="tarefas" element={<Tasks />} />
+                            <Route path="tarefas/:id" element={<TaskDetail />} />
                             <Route path="agenda" element={<Agenda />} />
+                            <Route path="notificacoes" element={<Notifications />} />
                             <Route path="financeiro" element={<Financial />} />
+                            <Route path="insights" element={<Insights />} />
                             <Route path="gestao" element={<Management />} />
                             <Route path="gamificacao" element={<Gamification />} />
                             <Route path="config" element={<Settings />} />
@@ -128,6 +160,7 @@ const App: React.FC = () => {
           </ContactModalProvider>
         </AppProvider>
       </AuthProvider>
+    </AdminAuthProvider>
     </ThemeProvider>
   );
 };

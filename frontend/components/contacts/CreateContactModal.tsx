@@ -3,6 +3,8 @@ import { X, UserPlus2, Loader2, Sparkles } from 'lucide-react';
 import { useContactModal } from '../../hooks/useContactModal';
 import { useApp } from '../../store/AppContext';
 import { Button } from '../ui/Button';
+import { CategoryItem, MentionReference } from '../../types/types';
+import MentionTextarea from '../inputs/MentionTextarea';
 
 type FormState = {
   name: string;
@@ -14,25 +16,31 @@ type FormState = {
   email: string;
   phone: string;
   profession: string;
+  contactCategoryId: string;
+  leadCategoryId: string;
+  notes: string;
+  mentions: MentionReference[];
 };
 
 const initialState: FormState = {
   name: '',
   document: '',
   origin: '',
-  status: 'Lead',
+  status: '',
   ownerId: '',
   lastInteraction: '',
   email: '',
   phone: '',
   profession: '',
+  contactCategoryId: '',
+  leadCategoryId: '',
+  notes: '',
+  mentions: [],
 };
-
-const statusOptions = ['Lead', 'Cliente', 'Prospect'];
 
 const CreateContactModal: React.FC = () => {
   const { isOpen, close } = useContactModal();
-  const { addContact, contacts, users } = useApp();
+  const { addContact, contacts, users, categoryGroups } = useApp();
   const [form, setForm] = useState<FormState>(initialState);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,16 +54,56 @@ const CreateContactModal: React.FC = () => {
     return Array.from(values);
   }, [contacts]);
 
+  const contactCategoryItems = useMemo(() => {
+    const group = categoryGroups.find(categoryGroup => categoryGroup.id === 'contacts');
+    if (group && group.items.length > 0) {
+      return group.items;
+    }
+    const fallback: CategoryItem[] = ['Cliente', 'Lead', 'Prospect', 'Parceiro'].map((label, index) => ({
+      id: `contacts-fallback-${index}`,
+      name: label,
+    }));
+    return fallback;
+  }, [categoryGroups]);
+
+  const leadCategoryItems = useMemo(() => {
+    const group = categoryGroups.find(categoryGroup => categoryGroup.id === 'leads');
+    if (group && group.items.length > 0) {
+      return group.items;
+    }
+    return [] as CategoryItem[];
+  }, [categoryGroups]);
+
   const resetForm = () => {
     const defaultOwner = ownerOptions[0]?.value ?? '';
-    setForm({ ...initialState, ownerId: defaultOwner });
+    const defaultContactCategoryId = contactCategoryItems[0]?.id ?? '';
+    const defaultStatus = defaultContactCategoryId
+      ? contactCategoryItems.find(item => item.id === defaultContactCategoryId)?.name ?? 'Lead'
+      : 'Lead';
+    setForm({
+      ...initialState,
+      ownerId: defaultOwner,
+      status: defaultStatus,
+      contactCategoryId: defaultContactCategoryId,
+      leadCategoryId: '',
+    });
     setError(null);
   };
 
   useEffect(() => {
     if (isOpen) {
       const defaultOwner = ownerOptions[0]?.value ?? '';
-      setForm(prev => ({ ...initialState, ownerId: prev.ownerId || defaultOwner }));
+      const defaultContactCategoryId = contactCategoryItems[0]?.id ?? '';
+      const defaultStatus = defaultContactCategoryId
+        ? contactCategoryItems.find(item => item.id === defaultContactCategoryId)?.name ?? 'Lead'
+        : 'Lead';
+      setForm({
+        ...initialState,
+        ownerId: defaultOwner,
+        status: defaultStatus,
+        contactCategoryId: defaultContactCategoryId,
+        leadCategoryId: '',
+      });
       document.body.classList.add('overflow-hidden');
       const handleKeyDown = (event: KeyboardEvent) => {
         if (event.key === 'Escape') close();
@@ -67,10 +115,58 @@ const CreateContactModal: React.FC = () => {
       };
     }
     return undefined;
-  }, [isOpen, ownerOptions, close]);
+  }, [isOpen, ownerOptions, close, contactCategoryItems]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    if (contactCategoryItems.length === 0) return;
+    const exists = contactCategoryItems.some(item => item.id === form.contactCategoryId);
+    if (!form.contactCategoryId || !exists) {
+      handleCategoryChange(contactCategoryItems[0].id);
+    }
+  }, [contactCategoryItems, form.contactCategoryId, isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    if (!form.leadCategoryId) return;
+    const exists = leadCategoryItems.some(item => item.id === form.leadCategoryId);
+    if (!exists) {
+      setForm(prev => ({ ...prev, leadCategoryId: '' }));
+    }
+  }, [leadCategoryItems, form.leadCategoryId, isOpen]);
 
   const handleChange = (field: keyof FormState, value: string) => {
     setForm(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleCategoryChange = (value: string) => {
+    const selected = contactCategoryItems.find(item => item.id === value);
+    setForm(prev => ({
+      ...prev,
+      contactCategoryId: value,
+      status: selected?.name ?? prev.status,
+    }));
+  };
+
+  const handleLeadCategoryChange = (value: string) => {
+    setForm(prev => ({
+      ...prev,
+      leadCategoryId: value,
+    }));
+  };
+
+  const handleNotesChange = (value: string) => {
+    setForm(prev => ({
+      ...prev,
+      notes: value,
+    }));
+  };
+
+  const handleMentionsChange = (nextMentions: MentionReference[]) => {
+    setForm(prev => ({
+      ...prev,
+      mentions: nextMentions,
+    }));
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -87,16 +183,24 @@ const CreateContactModal: React.FC = () => {
     setError(null);
     setIsSubmitting(true);
     try {
+      const normalizedStatus = form.status.trim() ||
+        (form.contactCategoryId
+          ? contactCategoryItems.find(item => item.id === form.contactCategoryId)?.name ?? 'Lead'
+          : 'Lead');
       await addContact({
         name: form.name.trim(),
         document: form.document.trim(),
         origin: form.origin.trim() || 'Indicação',
-        status: form.status || 'Lead',
+        status: normalizedStatus,
         ownerId: Number(form.ownerId),
         email: form.email.trim(),
         phone: form.phone.trim(),
         profession: form.profession.trim(),
         lastInteraction: form.lastInteraction ? new Date(form.lastInteraction).toISOString() : undefined,
+        categoryId: form.contactCategoryId || undefined,
+        leadCategoryId: form.leadCategoryId || undefined,
+        notes: form.notes.trim() || undefined,
+        mentions: form.mentions,
       });
       resetForm();
       close();
@@ -214,16 +318,43 @@ const CreateContactModal: React.FC = () => {
               </datalist>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Status</label>
+              <label className="text-sm font-medium">Classificação</label>
               <select
-                value={form.status}
-                onChange={event => handleChange('status', event.target.value)}
+                value={form.contactCategoryId}
+                onChange={event => handleCategoryChange(event.target.value)}
                 className="w-full rounded-xl border bg-background/70 p-3 text-sm shadow-inner transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40 dark:border-dark-border dark:bg-dark-background/70"
               >
-                {statusOptions.map(option => (
-                  <option key={option} value={option}>{option}</option>
+                {contactCategoryItems.map(option => (
+                  <option key={option.id} value={option.id}>{option.name}</option>
                 ))}
               </select>
+              <p className="text-xs text-muted-foreground">Personalize as categorias em Configurações &gt; Categorias.</p>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Estágio do pipeline</label>
+              <select
+                value={form.leadCategoryId}
+                onChange={event => handleLeadCategoryChange(event.target.value)}
+                className="w-full rounded-xl border bg-background/70 p-3 text-sm shadow-inner transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40 dark:border-dark-border dark:bg-dark-background/70"
+              >
+                <option value="">Sem classificação</option>
+                {leadCategoryItems.map(option => (
+                  <option key={option.id} value={option.id}>{option.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="md:col-span-2">
+              <MentionTextarea
+                label="Notas internas"
+                description="Use @ para mencionar colegas e # para relacionar contatos existentes."
+                placeholder="Ex.: Avisar @Sofia sobre a proposta e atualizar dados de #Empresa Alpha"
+                value={form.notes}
+                onChange={handleNotesChange}
+                onMentionsChange={handleMentionsChange}
+                users={users}
+                contacts={contacts}
+                initialMentions={form.mentions}
+              />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Responsável</label>

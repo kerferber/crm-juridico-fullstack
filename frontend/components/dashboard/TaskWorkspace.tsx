@@ -76,23 +76,28 @@ const TaskWorkspace: React.FC = () => {
   }, [myTasks, today]);
 
   return (
-    <Card className="rounded-xl border border-border/60 shadow-sm dark:border-dark-border/60">
-      <CardHeader className="space-y-4 border-b border-border/60 pb-5 dark:border-dark-border/50">
+    <Card className="rounded-lg border border-slate-200 bg-white shadow-[0_18px_48px_-40px_rgba(15,23,42,0.32)] dark:border-dark-border/60 dark:bg-dark-card/80">
+      <CardHeader className="space-y-4 border-b border-slate-200 pb-5 dark:border-dark-border/50">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <CardTitle className="text-base font-semibold text-foreground dark:text-dark-foreground">
+            <CardTitle className="text-base font-semibold text-slate-900 dark:text-dark-foreground">
               Painel de Tarefas
             </CardTitle>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-slate-500">
               Tenha visibilidade imediata das entregas críticas do time.
             </p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-            <div className="inline-flex rounded-lg border border-border/60 bg-white/80 p-1 text-muted-foreground shadow-sm dark:border-dark-border/60 dark:bg-dark-background/70">
+            <div className="inline-flex rounded-md border border-slate-200 bg-slate-50 p-1 text-slate-500 shadow-sm dark:border-dark-border/60 dark:bg-dark-background/70">
               <Button
                 size="sm"
                 variant={view === 'list' ? 'secondary' : 'ghost'}
-                className="flex items-center gap-1 px-3 text-xs"
+                className={cn(
+                  'flex items-center gap-1 px-3 text-xs',
+                  view === 'list'
+                    ? 'bg-white text-slate-700 shadow-sm dark:text-dark-foreground'
+                    : 'text-slate-500 hover:text-sky-600'
+                )}
                 onClick={() => setView('list')}
               >
                 <LayoutList className="h-4 w-4" />
@@ -101,7 +106,12 @@ const TaskWorkspace: React.FC = () => {
               <Button
                 size="sm"
                 variant={view === 'board' ? 'secondary' : 'ghost'}
-                className="flex items-center gap-1 px-3 text-xs"
+                className={cn(
+                  'flex items-center gap-1 px-3 text-xs',
+                  view === 'board'
+                    ? 'bg-white text-slate-700 shadow-sm dark:text-dark-foreground'
+                    : 'text-slate-500 hover:text-sky-600'
+                )}
                 onClick={() => setView('board')}
               >
                 <LayoutGrid className="h-4 w-4" />
@@ -110,7 +120,7 @@ const TaskWorkspace: React.FC = () => {
             </div>
             <Button
               size="sm"
-              className="rounded-lg px-4 text-xs font-semibold shadow-[0_12px_24px_-18px_rgba(79,70,229,0.4)]"
+              className="rounded-md bg-sky-500 px-4 text-xs font-semibold text-white shadow-[0_18px_40px_-28px_rgba(56,189,248,0.55)] hover:bg-sky-600"
               onClick={openTaskModal}
             >
               <Plus className="mr-2 h-4 w-4" />
@@ -122,9 +132,9 @@ const TaskWorkspace: React.FC = () => {
           {metrics.map(metric => (
             <div
               key={metric.label}
-              className="flex items-center justify-between rounded-lg border border-border/60 bg-white px-3 py-2 text-xs shadow-sm dark:border-dark-border/50 dark:bg-dark-card/70"
+              className="flex items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2 text-xs shadow-sm dark:border-dark-border/50 dark:bg-dark-card/70"
             >
-              <div className="flex items-center gap-2 text-muted-foreground">
+              <div className="flex items-center gap-2 text-slate-500">
                 <metric.icon className={cn('h-4 w-4', metric.iconClass)} />
                 <span>{metric.label}</span>
               </div>

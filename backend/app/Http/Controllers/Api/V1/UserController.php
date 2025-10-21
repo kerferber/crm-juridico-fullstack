@@ -6,19 +6,26 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 
 class UserController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        return User::paginate(20);
+        $tenantId = $this->ensureTenantId($request);
+
+        return User::where('tenant_id', $tenantId)
+            ->orderBy('name')
+            ->paginate(20);
     }
 
     public function store(Request $request)
     {
+        $tenantId = $this->ensureTenantId($request);
+
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
+            'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->where('tenant_id', $tenantId)],
             'password' => ['required', 'string', 'min:8'],
             'avatar' => ['nullable', 'string'],
             'job_title' => ['nullable', 'string', 'max:255'],
@@ -34,9 +41,11 @@ class UserController extends Controller
             'linkedin_url' => ['nullable', 'string', 'max:255'],
             'instagram_url' => ['nullable', 'string', 'max:255'],
             'bio' => ['nullable', 'string'],
+            'is_tenant_admin' => ['sometimes', 'boolean'],
         ]);
 
-        $user = User::create([
+        $payload = [
+            'tenant_id' => $tenantId,
             'name' => $data['name'],
             'email' => $data['email'],
             'password' => Hash::make($data['password']),
@@ -54,17 +63,44 @@ class UserController extends Controller
             'linkedin_url' => $data['linkedin_url'] ?? null,
             'instagram_url' => $data['instagram_url'] ?? null,
             'bio' => $data['bio'] ?? null,
-        ]);
+        ];
 
-        return response()->json($user, 201);
+        if ($request->user()?->is_tenant_admin ?? false) {
+            $payload['is_tenant_admin'] = $data['is_tenant_admin'] ?? false;
+        }
+
+        $user = User::create($payload);
+
+        return response()->json($user->load('tenant'), 201);
     }
 
-    public function show($id) { return User::findOrFail($id); }
-    public function update(Request $request, $id) {
-        $user = User::findOrFail($id);
+    public function show(Request $request, $id)
+    {
+        $tenantId = $this->ensureTenantId($request);
+
+        return User::where('tenant_id', $tenantId)
+            ->with('tenant')
+            ->findOrFail($id);
+    }
+
+    public function update(Request $request, $id)
+    {
+        $tenantId = $this->ensureTenantId($request);
+
+        $user = User::where('tenant_id', $tenantId)->findOrFail($id);
+
         $data = $request->validate([
             'name' => ['sometimes', 'required', 'string', 'max:255'],
-            'email' => ['sometimes', 'required', 'email', 'max:255', 'unique:users,email,' . $user->id],
+            'email' => [
+                'sometimes',
+                'required',
+                'email',
+                'max:255',
+                Rule::unique('users', 'email')
+                    ->where('tenant_id', $tenantId)
+                    ->ignore($user->id),
+            ],
+            'password' => ['nullable', 'string', 'min:8'],
             'avatar' => ['nullable', 'string'],
             'job_title' => ['nullable', 'string', 'max:255'],
             'personal_email' => ['nullable', 'email', 'max:255'],
@@ -79,10 +115,44 @@ class UserController extends Controller
             'linkedin_url' => ['nullable', 'string', 'max:255'],
             'instagram_url' => ['nullable', 'string', 'max:255'],
             'bio' => ['nullable', 'string'],
+            'is_tenant_admin' => ['sometimes', 'boolean'],
         ]);
 
+        if (!empty($data['password'])) {
+            $data['password'] = Hash::make($data['password']);
+        } else {
+            unset($data['password']);
+        }
+
+        if (!$request->user()?->is_tenant_admin ?? true) {
+            unset($data['is_tenant_admin']);
+        }
+
         $user->update($data);
-        return $user;
+
+        return $user->load('tenant');
     }
-    public function destroy($id) { User::findOrFail($id)->delete(); return response()->noContent(); }
+
+    public function destroy(Request $request, $id)
+    {
+        $tenantId = $this->ensureTenantId($request);
+
+        $user = User::where('tenant_id', $tenantId)->findOrFail($id);
+
+        abort_if(
+            !$request->user()?->is_tenant_admin,
+            403,
+            'Somente administradores do tenant podem excluir usuários.'
+        );
+
+        abort_if(
+            $request->user()->id === $user->id,
+            422,
+            'Não é possível remover o próprio usuário ativo.'
+        );
+
+        $user->delete();
+
+        return response()->noContent();
+    }
 }

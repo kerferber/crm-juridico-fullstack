@@ -27,6 +27,7 @@ import { formatDate } from '../lib/utils';
 import TaskShortcutCard from '../components/tasks/TaskShortcutCard';
 import { useTaskModal } from '../hooks/useTaskModal';
 import { cn } from '../lib/utils';
+import MentionBadges from '../components/mentions/MentionBadges';
 
 const STATUS_COLORS: Record<string, string> = {
   Ativo: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-200',
@@ -319,20 +320,26 @@ const LawsuitDetail: React.FC = () => {
             ctaLabel="Nova tarefa do processo"
           />
 
-          <Card className="border border-dashed border-border/60 bg-muted/15 shadow-none dark:border-dark-border/60 dark:bg-dark-card/50">
-            <CardHeader>
-              <CardTitle className="text-sm font-semibold">Anotações estratégicas</CardTitle>
-              <p className="text-xs text-muted-foreground">
-                Registre insights e aprendizados para futuras audiências ou negociações.
-              </p>
-            </CardHeader>
-            <CardContent>
-              <div className="rounded-lg border border-border/50 bg-white/85 px-3 py-2 text-xs text-muted-foreground italic dark:border-dark-border/60 dark:bg-dark-card/60">
-                Ex.: Possibilidade de acordo extrajudicial — reunir documentos do cliente até a
-                próxima audiência.
-              </div>
-            </CardContent>
-          </Card>
+          {(lawsuit.notes || (lawsuit.mentions && lawsuit.mentions.length > 0)) && (
+            <Card className="border border-border/60 shadow-sm dark:border-dark-border/60 dark:bg-dark-card/80">
+              <CardHeader>
+                <CardTitle className="text-sm font-semibold">Notas estratégicas</CardTitle>
+                <p className="text-xs text-muted-foreground">
+                  Centralize aprendizados e lembretes rápidos relacionados a este processo.
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm text-muted-foreground">
+                {lawsuit.notes ? (
+                  <p className="whitespace-pre-line text-foreground dark:text-dark-foreground">
+                    {lawsuit.notes}
+                  </p>
+                ) : (
+                  <p className="italic">Sem notas registradas.</p>
+                )}
+                <MentionBadges mentions={lawsuit.mentions} users={users} contacts={contacts} />
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
 

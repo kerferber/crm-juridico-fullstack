@@ -14,6 +14,7 @@ import {
   ChevronsRight,
   ChevronsLeft,
   X,
+  Sparkles,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
@@ -21,7 +22,7 @@ interface NavItem {
   to: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
-  badgeColor?: string;
+  accentClass?: string;
   exact?: boolean;
 }
 
@@ -31,21 +32,22 @@ interface SidebarProps {
 }
 
 const primaryNav: NavItem[] = [
-  { to: '/', label: 'Página inicial', icon: Home, exact: true },
-  { to: '/tarefas', label: 'Minhas tarefas', icon: CheckSquare },
-  { to: '/agenda', label: 'Caixa de entrada', icon: Inbox },
+  { to: '/', label: 'Página inicial', icon: Home, accentClass: 'bg-primary/90', exact: true },
+  { to: '/tarefas', label: 'Minhas tarefas', icon: CheckSquare, accentClass: 'bg-emerald-500' },
+  { to: '/agenda', label: 'Caixa de entrada', icon: Inbox, accentClass: 'bg-sky-500' },
 ];
 
 const insightNav: NavItem[] = [
-  { to: '/gestao', label: 'Relatórios', icon: BarChart3 },
-  { to: '/financeiro', label: 'Portfólios', icon: DollarSign },
-  { to: '/gamificacao', label: 'Metas & Gamificação', icon: Trophy },
+  { to: '/insights', label: 'Insights', icon: Sparkles, accentClass: 'bg-amber-500' },
+  { to: '/gestao', label: 'Relatórios', icon: BarChart3, accentClass: 'bg-primary/80' },
+  { to: '/financeiro', label: 'Portfólios', icon: DollarSign, accentClass: 'bg-indigo-500' },
+  { to: '/gamificacao', label: 'Metas & Gamificação', icon: Trophy, accentClass: 'bg-purple-500' },
 ];
 
 const projectNav: NavItem[] = [
-  { to: '/crm', label: 'CRM · Pipeline', icon: LayoutDashboard, badgeColor: 'bg-indigo-500' },
-  { to: '/processos', label: 'Processos', icon: Briefcase, badgeColor: 'bg-sky-500' },
-  { to: '/contatos', label: 'Contatos', icon: Users, badgeColor: 'bg-rose-500' },
+  { to: '/crm', label: 'CRM · Pipeline', icon: LayoutDashboard, accentClass: 'bg-primary' },
+  { to: '/processos', label: 'Processos', icon: Briefcase, accentClass: 'bg-sky-500' },
+  { to: '/contatos', label: 'Contatos', icon: Users, accentClass: 'bg-rose-500' },
 ];
 
 const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen = false, onMobileClose = () => {} }) => {
@@ -75,18 +77,18 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen = false, onMobileClose =
       />
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 flex h-full min-h-0 w-[240px] flex-col border-r border-border/60 bg-white transition-transform duration-200 dark:border-dark-border/60 dark:bg-dark-card/95 md:relative md:z-30 md:w-auto md:translate-x-0 md:shadow-none',
-          isCollapsedDesktop ? 'md:w-[68px]' : 'md:w-[240px]',
+          'fixed inset-y-0 left-0 z-50 flex h-full min-h-0 w-[232px] flex-col border-r border-slate-200 bg-surface transition-transform duration-200 dark:border-dark-border/60 dark:bg-dark-surface md:relative md:z-30 md:w-auto md:translate-x-0 md:shadow-none',
+          isCollapsedDesktop ? 'md:w-[84px]' : 'md:w-[248px]',
           isMobileOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full md:translate-x-0'
         )}
       >
-        <div className="flex min-h-[72px] items-center justify-between border-b border-border/50 px-3 py-4 dark:border-dark-border/60">
+        <div className="flex min-h-[64px] items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-dark-border/60">
           {!isCollapsedDesktop ? (
-            <div className="flex flex-col gap-1">
-              <span className="text-[13px] font-semibold tracking-tight leading-tight text-foreground dark:text-dark-foreground">
+            <div className="flex flex-col">
+              <span className="text-base font-semibold leading-tight text-foreground dark:text-dark-foreground">
                 CRM Jurídico
               </span>
-              <span className="text-[9px] uppercase tracking-[0.26em] text-muted-foreground/70">
+              <span className="text-xs font-medium text-muted-foreground dark:text-dark-muted">
                 Workflow Studio
               </span>
             </div>
@@ -96,7 +98,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen = false, onMobileClose =
           <div className="flex items-center gap-2">
             <button
               onClick={onMobileClose}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-border/70 text-muted-foreground transition hover:text-foreground dark:border-dark-border/60 dark:hover:bg-dark-border/50 md:hidden"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 bg-surface text-muted-foreground transition hover:border-primary/40 hover:text-foreground dark:border-dark-border/60 dark:bg-dark-surface dark:hover:bg-dark-border/40 md:hidden"
               aria-label="Fechar menu"
             >
               <X className="h-4 w-4" />
@@ -104,7 +106,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen = false, onMobileClose =
             <button
               onClick={handleToggleCollapse}
               className={cn(
-                'hidden rounded-full border border-border/70 p-1 text-muted-foreground transition hover:text-foreground dark:border-dark-border/60 dark:hover:bg-dark-border/50 md:inline-flex',
+                'hidden rounded-md border border-slate-200 p-1.5 text-muted-foreground transition hover:border-primary/40 hover:text-foreground dark:border-dark-border/60 dark:bg-dark-surface dark:hover:bg-dark-border/50 md:inline-flex',
                 isCollapsedDesktop ? 'justify-center' : ''
               )}
               aria-label="Alternar largura do menu"
@@ -114,11 +116,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen = false, onMobileClose =
           </div>
         </div>
 
-        <nav className="flex-1 space-y-4 overflow-y-auto px-3 py-4 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-muted/40">
+        <nav className="flex-1 space-y-3 overflow-y-auto px-3 py-3 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-muted/40">
           {sections.map(section => (
             <div key={section.id} className="space-y-2">
               {!isCollapsedDesktop && (
-                <div className="px-1.5 text-[10px] font-semibold uppercase tracking-[0.24em] text-muted-foreground/80">
+                <div className="px-1.5 text-xs font-semibold text-muted-foreground/80">
                   {section.title}
                 </div>
               )}
@@ -131,11 +133,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen = false, onMobileClose =
                     title={isCollapsedDesktop ? item.label : undefined}
                     className={({ isActive }) =>
                       cn(
-                        'group flex items-center gap-3 rounded-md px-2.5 py-1.5 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/15',
-                        isCollapsedDesktop ? 'justify-center px-0 py-1.5' : 'justify-start',
+                        'group relative flex items-center gap-3 rounded-md py-1.5 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/15',
+                        isCollapsedDesktop ? 'justify-center px-0' : 'pl-6 pr-3',
                         isActive
-                          ? 'bg-primary/10 text-primary dark:bg-dark-primary/10 dark:text-dark-primary'
-                          : 'text-muted-foreground hover:bg-muted/20 dark:hover:bg-dark-border/40'
+                          ? 'bg-primary/10 text-foreground dark:bg-dark-primary/15 dark:text-dark-foreground'
+                          : 'text-muted-foreground hover:bg-surface-muted dark:hover:bg-dark-surface-muted'
                       )
                     }
                     onClick={() => {
@@ -146,19 +148,26 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen = false, onMobileClose =
                   >
                     {({ isActive }) => (
                       <>
+                        {!isCollapsedDesktop && (
+                          <span
+                            className={cn(
+                              'absolute left-3 top-1/2 h-6 w-[3px] -translate-y-1/2 rounded-sm transition-opacity duration-200',
+                              item.accentClass ?? 'bg-primary',
+                              isActive ? 'opacity-100' : 'opacity-0'
+                            )}
+                            aria-hidden="true"
+                          />
+                        )}
                         <item.icon
                           className={cn(
-                            'h-[17px] w-[17px]',
+                            'h-[18px] w-[18px] flex-shrink-0 transition-colors',
                             isActive ? 'text-primary dark:text-dark-primary' : 'text-muted-foreground'
                           )}
                         />
                         {!isCollapsedDesktop && (
-                          <span className="flex-1 text-[13px] tracking-tight text-foreground dark:text-dark-foreground">
+                          <span className="flex-1 text-sm leading-none text-foreground dark:text-dark-foreground">
                             {item.label}
                           </span>
-                        )}
-                        {!isCollapsedDesktop && item.badgeColor && (
-                          <span className={cn('h-2 w-2 rounded-full', item.badgeColor)} />
                         )}
                       </>
                     )}
@@ -169,7 +178,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen = false, onMobileClose =
           ))}
         </nav>
 
-        <div className={cn('border-t border-border/60 px-3 py-3 dark:border-dark-border/60', isCollapsedDesktop && 'px-2')}>
+        <div className={cn('border-t border-slate-200 px-3 py-3 dark:border-dark-border/60', isCollapsedDesktop && 'px-2')}>
           <NavLink
             to="/config"
             title={isCollapsedDesktop ? 'Configurações' : undefined}
@@ -180,23 +189,35 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen = false, onMobileClose =
             }}
             className={({ isActive }) =>
               cn(
-                'flex items-center gap-3 rounded-md px-2.5 py-1.5 text-sm font-medium transition hover:bg-muted/25 dark:hover:bg-dark-border/40',
-                isCollapsedDesktop ? 'justify-center px-0 py-1.5' : 'justify-start',
+                'group relative flex items-center gap-3 rounded-md py-1.5 text-sm font-medium transition hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/15 dark:hover:bg-dark-surface-muted',
+                isCollapsedDesktop ? 'justify-center px-0' : 'pl-6 pr-3',
                 isActive
-                  ? 'bg-primary/10 text-primary dark:bg-dark-primary/10 dark:text-dark-primary'
+                  ? 'bg-primary/10 text-foreground dark:bg-dark-primary/15 dark:text-dark-foreground'
                   : 'text-muted-foreground'
               )
             }
           >
             {({ isActive }) => (
               <>
+                {!isCollapsedDesktop && (
+                  <span
+                    className={cn(
+                      'absolute left-3 top-1/2 h-6 w-[3px] -translate-y-1/2 rounded-full transition-opacity duration-200',
+                      'bg-primary/80',
+                      isActive ? 'opacity-100' : 'opacity-0'
+                    )}
+                    aria-hidden="true"
+                  />
+                )}
                 <Settings
                   className={cn(
-                    'h-[17px] w-[17px]',
+                    'h-[18px] w-[18px] flex-shrink-0 transition-colors',
                     isActive ? 'text-primary dark:text-dark-primary' : 'text-muted-foreground'
                   )}
                 />
-                {!isCollapsedDesktop && <span className="text-[13px] tracking-tight">Configurações</span>}
+                {!isCollapsedDesktop && (
+                  <span className="text-sm leading-none text-foreground dark:text-dark-foreground">Configurações</span>
+                )}
               </>
             )}
           </NavLink>

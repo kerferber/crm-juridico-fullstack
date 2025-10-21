@@ -4,13 +4,15 @@ import { Button } from '../ui/Button';
 import { Loader2, ClipboardList, X, CheckCircle } from 'lucide-react';
 import { useTaskModal } from '../../hooks/useTaskModal';
 import { useApp } from '../../store/AppContext';
-import { TaskStatus } from '../../types/types';
+import { TaskStatus, MentionReference } from '../../types/types';
+import MentionTextarea from '../inputs/MentionTextarea';
+import ContactSearchInput from '../contacts/ContactSearchInput';
 
 const STATUS_OPTIONS = [TaskStatus.Pendente, TaskStatus.Atrasada, TaskStatus.Concluida];
 
 const CreateTaskModal: React.FC = () => {
   const { isOpen, mode, task, defaults, close } = useTaskModal();
-  const { users, lawsuits, contacts, addTask, updateTask, updateTaskStatus } = useApp();
+  const { users, lawsuits, contacts, addTask, updateTask, updateTaskStatus, categoryGroups } = useApp();
 
   const [title, setTitle] = useState('');
   const [dueDate, setDueDate] = useState('');
@@ -20,6 +22,9 @@ const CreateTaskModal: React.FC = () => {
   const [lawsuitId, setLawsuitId] = useState<number | ''>('');
   const [contactId, setContactId] = useState<number | ''>('');
   const [score, setScore] = useState(0);
+  const [categoryId, setCategoryId] = useState<string>('');
+  const [notes, setNotes] = useState('');
+  const [mentions, setMentions] = useState<MentionReference[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -32,6 +37,10 @@ const CreateTaskModal: React.FC = () => {
     return lawsuits;
   }, [lawsuits, contactId]);
   const today = dayjs().format('YYYY-MM-DD');
+  const taskCategories = useMemo(() => {
+    const group = categoryGroups.find(group => group.id === 'tasks');
+    return group ? group.items : [];
+  }, [categoryGroups]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -50,6 +59,9 @@ const CreateTaskModal: React.FC = () => {
       setLawsuitId(task.lawsuitId ?? '');
       setContactId(task.clientId ?? '');
       setScore(task.score ?? 0);
+      setCategoryId(task.categoryId ?? (taskCategories[0]?.id ?? ''));
+      setNotes(task.notes ?? '');
+      setMentions(task.mentions ?? []);
     } else {
       setTitle(defaults?.title ?? '');
       setDueDate(formatInputDate(defaults?.dueDate));
@@ -59,6 +71,9 @@ const CreateTaskModal: React.FC = () => {
       setLawsuitId(defaults?.lawsuitId ?? '');
       setContactId(defaults?.clientId ?? '');
       setScore(defaults?.score ?? 0);
+      setCategoryId(defaults?.categoryId ?? (taskCategories[0]?.id ?? ''));
+      setNotes(defaults?.notes ?? '');
+      setMentions(defaults?.mentions ?? []);
     }
 
     setError(null);
@@ -75,7 +90,7 @@ const CreateTaskModal: React.FC = () => {
       window.removeEventListener('keydown', handleEsc);
       document.body.classList.remove('overflow-hidden');
     };
-  }, [isOpen, mode, task, defaults, close, defaultResponsibleId, today]);
+  }, [isOpen, mode, task, defaults, close, defaultResponsibleId, today, taskCategories]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -106,6 +121,18 @@ const CreateTaskModal: React.FC = () => {
       }
     }
   }, [contactId, contacts, responsibleId, isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    if (!categoryId) {
+      setCategoryId(taskCategories[0]?.id ?? '');
+      return;
+    }
+    const exists = taskCategories.some(category => category.id === categoryId);
+    if (!exists) {
+      setCategoryId(taskCategories[0]?.id ?? '');
+    }
+  }, [taskCategories, categoryId, isOpen]);
 
   if (!isOpen) return null;
 
@@ -149,6 +176,9 @@ const CreateTaskModal: React.FC = () => {
         clientId: contactId ? Number(contactId) : undefined,
         score,
         status,
+        categoryId: categoryId || undefined,
+        notes: notes.trim() || undefined,
+        mentions,
       };
 
       if (mode === 'edit' && task) {
@@ -269,6 +299,21 @@ const CreateTaskModal: React.FC = () => {
               </select>
             </label>
             <label className="flex flex-col gap-1 text-xs font-medium">
+              Categoria
+              <select
+                value={categoryId}
+                onChange={event => setCategoryId(event.target.value)}
+                className="rounded-md border border-border/60 bg-transparent px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-dark-border/60"
+              >
+                <option value="">Sem categoria</option>
+                {taskCategories.map(category => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1 text-xs font-medium">
               Responsável
               <select
                 value={responsibleId}
@@ -307,6 +352,18 @@ const CreateTaskModal: React.FC = () => {
               />
             </label>
           </div>
+
+          <MentionTextarea
+            label="Notas internas"
+            description="Use @ para mencionar colegas e # para referenciar contatos vinculados."
+            placeholder="Ex.: Ajustar argumentos com @Sofia e solicitar documentos para #Empresa Alpha"
+            value={notes}
+            onChange={setNotes}
+            onMentionsChange={setMentions}
+            users={users}
+            contacts={contacts}
+            initialMentions={mentions}
+          />
 
           <div className="flex flex-col gap-3 border-t border-border/60 pt-4 dark:border-dark-border/60 sm:flex-row sm:items-center sm:justify-between">
             <Button variant="ghost" type="button" onClick={handleClose} disabled={isActionDisabled}>

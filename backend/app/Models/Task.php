@@ -11,8 +11,15 @@ class Task extends Model
     use HasFactory;
 
     protected $fillable = [
-        'title','status','due_date','deadline','score',
-        'responsible_id','lawsuit_id','client_id'
+        'tenant_id',
+        'title',
+        'status',
+        'due_date',
+        'deadline',
+        'score',
+        'responsible_id',
+        'lawsuit_id',
+        'client_id',
     ];
 
     protected $casts = [
@@ -40,5 +47,10 @@ class Task extends Model
         if ($this->status === 'Concluída') return 'Concluída';
         if ($this->deadline && $this->deadline->isPast()) return 'Atrasada';
         return 'Pendente';
+    }
+
+    public function tenant()
+    {
+        return $this->belongsTo(Tenant::class);
     }
 }

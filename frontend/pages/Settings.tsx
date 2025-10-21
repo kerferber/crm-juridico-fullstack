@@ -4,9 +4,25 @@ import { Button } from '../components/ui/Button';
 import { Spinner } from '../components/ui/Spinner';
 import { useApp } from '../store/AppContext';
 import { ApiError } from '../services/api';
+import CategoriesManager from '../components/settings/CategoriesManager';
+import RolePermissionsManager from '../components/settings/RolePermissionsManager';
+import GoalsManager from '../components/settings/GoalsManager';
 
 const Settings: React.FC = () => {
-  const { users, createCollaborator } = useApp();
+  const {
+    users,
+    createCollaborator,
+    categoryGroups,
+    addCategory,
+    updateCategory,
+    removeCategory,
+    permissionsCatalog,
+    userRoles,
+    addUserRole,
+    updateUserRole,
+    removeUserRole,
+    setRolePermission,
+  } = useApp();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -220,29 +236,45 @@ const Settings: React.FC = () => {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="border border-border/70 shadow-sm">
         <CardHeader>
-          <CardTitle>Metas</CardTitle>
+          <CardTitle>Biblioteca de Categorias</CardTitle>
           <CardDescription>
-            Defina as metas de produtividade e fechamentos para a equipe.
+            Personalize os rótulos utilizados em tarefas, leads, processos, contatos, documentos e
+            finanças para adaptar o sistema ao seu fluxo.
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">Configurações de metas aqui.</p>
+        <CardContent className="px-2 pb-6 sm:px-6">
+          <CategoriesManager
+            categoryGroups={categoryGroups}
+            onAddCategory={addCategory}
+            onUpdateCategory={updateCategory}
+            onRemoveCategory={removeCategory}
+          />
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="border border-border/70 shadow-sm">
         <CardHeader>
-          <CardTitle>Categorias</CardTitle>
+          <CardTitle>Perfis e Permissões</CardTitle>
           <CardDescription>
-            Gerencie as categorias utilizadas no sistema (financeiro, áreas do direito, etc).
+            Defina papéis como administrador, advogado, estagiário ou financeiro e escolha o que cada
+            perfil pode acessar e editar dentro do CRM.
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">Gerenciamento de categorias aqui.</p>
+        <CardContent className="px-2 pb-6 sm:px-6">
+          <RolePermissionsManager
+            roles={userRoles}
+            permissions={permissionsCatalog}
+            onAddRole={addUserRole}
+            onUpdateRole={updateUserRole}
+            onRemoveRole={removeUserRole}
+            onTogglePermission={setRolePermission}
+          />
         </CardContent>
       </Card>
+
+      <GoalsManager />
     </div>
   );
 };

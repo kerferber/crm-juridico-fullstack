@@ -10,5 +10,19 @@ class Badge extends Model
     use HasFactory;
 
     public $timestamps = false;
-    protected $fillable = ['id','name','icon','description','type','threshold','area'];
+    protected $fillable = [
+        'id',
+        'tenant_id',
+        'name',
+        'icon',
+        'description',
+        'type',
+        'threshold',
+        'area',
+    ];
+
+    public function tenant()
+    {
+        return $this->belongsTo(Tenant::class);
+    }
 }

@@ -7,9 +7,20 @@ import { useProcessModal } from '../../hooks/useProcessModal';
 import { useTaskModal } from '../../hooks/useTaskModal';
 import { useTransactionModal } from '../../hooks/useTransactionModal';
 import { TransactionType } from '../../types/types';
-import { 
-    LayoutDashboard, BarChart3, Users, Briefcase, CheckSquare, Calendar, DollarSign, 
-    Settings, GitFork, Trophy, Plus, Search 
+import {
+    LayoutDashboard,
+    BarChart3,
+    Users,
+    Briefcase,
+    CheckSquare,
+    Calendar,
+    DollarSign,
+    Settings,
+    GitFork,
+    Trophy,
+    Plus,
+    Search,
+    Sparkles,
 } from 'lucide-react';
 
 interface Command {
@@ -38,9 +49,10 @@ const CommandPalette: React.FC = () => {
         { id: 'nav-5', title: 'Tarefas', icon: CheckSquare, action: () => navigate('/tarefas'), section: 'Navegação' },
         { id: 'nav-6', title: 'Agenda', icon: Calendar, action: () => navigate('/agenda'), section: 'Navegação' },
         { id: 'nav-7', title: 'Financeiro', icon: DollarSign, action: () => navigate('/financeiro'), section: 'Navegação' },
-        { id: 'nav-8', title: 'Gestão', icon: GitFork, action: () => navigate('/gestao'), section: 'Navegação' },
-        { id: 'nav-9', title: 'Gamificação', icon: Trophy, action: () => navigate('/gamificacao'), section: 'Navegação' },
-        { id: 'nav-10', title: 'Configurações', icon: Settings, action: () => navigate('/config'), section: 'Navegação' },
+        { id: 'nav-8', title: 'Insights', icon: Sparkles, action: () => navigate('/insights'), section: 'Navegação' },
+        { id: 'nav-9', title: 'Gestão', icon: GitFork, action: () => navigate('/gestao'), section: 'Navegação' },
+        { id: 'nav-10', title: 'Gamificação', icon: Trophy, action: () => navigate('/gamificacao'), section: 'Navegação' },
+        { id: 'nav-11', title: 'Configurações', icon: Settings, action: () => navigate('/config'), section: 'Navegação' },
 
         // Quick Actions
         { id: 'act-1', title: 'Novo Contato', icon: Plus, action: () => { navigate('/contatos'); openContactModal(); }, section: 'Ações Rápidas' },

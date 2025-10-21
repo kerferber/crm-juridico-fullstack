@@ -2,7 +2,20 @@
 const API_BASE_RAW = import.meta.env.VITE_API_BASE_URL || '';
 const API_BASE = API_BASE_RAW.replace(/\/$/, '');
 
-import { USERS, CONTACTS, LAWSUITS, TASKS, KANBAN_CARDS, CALENDAR_EVENTS, TRANSACTIONS } from '../data/seed';
+import {
+  USERS,
+  CONTACTS,
+  LAWSUITS,
+  TASKS,
+  KANBAN_CARDS,
+  CALENDAR_EVENTS,
+  TRANSACTIONS,
+  GOAL_PROGRAMS,
+  GOALS,
+  GOAL_CHECKPOINTS,
+  GOAL_ASSIGNMENTS,
+  GOAL_NOTIFICATIONS,
+} from '../data/seed';
 
 // Este cliente chama o backend Laravel quando `VITE_API_BASE_URL` está definido.
 // Caso contrário, mantém o comportamento mock utilizando os dados locais.
@@ -25,6 +38,11 @@ const mockApi = {
   '/kanban-cards': KANBAN_CARDS,
   '/calendar-events': CALENDAR_EVENTS,
   '/transactions': TRANSACTIONS,
+  '/goal-programs': GOAL_PROGRAMS,
+  '/goals': GOALS,
+  '/goal-checkpoints': GOAL_CHECKPOINTS,
+  '/goal-assignments': GOAL_ASSIGNMENTS,
+  '/goal-notifications': GOAL_NOTIFICATIONS,
 };
 
 export class ApiError extends Error {
@@ -39,7 +57,17 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T = unknown>(endpoint: string, init: RequestInit = {}): Promise<T> {
+interface RequestOptions {
+  includeTenant?: boolean;
+  includeUserToken?: boolean;
+  adminToken?: string | null;
+}
+
+async function request<T = unknown>(
+  endpoint: string,
+  init: RequestInit = {},
+  options: RequestOptions = {}
+): Promise<T> {
   if (isMockMode) {
     console.log(`[API MOCK] ${init.method ?? 'GET'}: ${endpoint}`);
     await delay(FAKE_API_DELAY);
@@ -55,6 +83,8 @@ async function request<T = unknown>(endpoint: string, init: RequestInit = {}): P
     return clone((data ?? [])) as T;
   }
 
+  const { includeTenant = true, includeUserToken = true, adminToken = null } = options;
+
   const headers = new Headers(init.headers ?? {});
   headers.set('Accept', 'application/json');
 
@@ -64,9 +94,22 @@ async function request<T = unknown>(endpoint: string, init: RequestInit = {}): P
     headers.set('Content-Type', 'application/json');
   }
 
-  const token = localStorage.getItem('token');
-  if (token) {
-    headers.set('Authorization', `Bearer ${token}`);
+  if (includeUserToken) {
+    const token = localStorage.getItem('token');
+    if (token) {
+      headers.set('Authorization', `Bearer ${token}`);
+    }
+  }
+
+  if (adminToken) {
+    headers.set('Authorization', `Bearer ${adminToken}`);
+  }
+
+  if (includeTenant) {
+    const tenantSlug = localStorage.getItem('tenantSlug');
+    if (tenantSlug) {
+      headers.set('X-Tenant', tenantSlug);
+    }
   }
 
   const response = await fetch(`${API_BASE}${normalizeEndpoint(endpoint)}`, {
@@ -115,18 +158,20 @@ async function request<T = unknown>(endpoint: string, init: RequestInit = {}): P
 }
 
 export const apiClient = {
-  get: async <T = unknown>(endpoint: string): Promise<T> =>
-    request<T>(endpoint, { method: 'GET' }),
+  get: async <T = unknown>(endpoint: string, options?: RequestOptions): Promise<T> =>
+    request<T>(endpoint, { method: 'GET' }, options),
 
-  post: async <T = unknown>(endpoint: string, data: any): Promise<T> =>
-    request<T>(endpoint, { method: 'POST', body: JSON.stringify(data) }),
+  post: async <T = unknown>(endpoint: string, data: any, options?: RequestOptions): Promise<T> =>
+    request<T>(endpoint, { method: 'POST', body: JSON.stringify(data) }, options),
 
-  put: async <T = unknown>(endpoint: string, data: any): Promise<T> =>
-    request<T>(endpoint, { method: 'PUT', body: JSON.stringify(data) }),
+  put: async <T = unknown>(endpoint: string, data: any, options?: RequestOptions): Promise<T> =>
+    request<T>(endpoint, { method: 'PUT', body: JSON.stringify(data) }, options),
 
-  delete: async (endpoint: string): Promise<void> => {
-    await request(endpoint, { method: 'DELETE' });
+  delete: async (endpoint: string, options?: RequestOptions): Promise<void> => {
+    await request(endpoint, { method: 'DELETE' }, options);
   },
 };
 
 export const isUsingMockApi = isMockMode;
+
+export type { RequestOptions };

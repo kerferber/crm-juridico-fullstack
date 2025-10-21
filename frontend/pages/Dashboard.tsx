@@ -1,22 +1,36 @@
 import React, { useMemo, useState } from 'react';
 import dayjs from 'dayjs';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { useApp } from '../store/AppContext';
 import { cn } from '../lib/utils';
 import { TaskStatus } from '../types/types';
-import { LayoutDashboard, AlertTriangle, Clock, Briefcase, Users, ArrowRight } from 'lucide-react';
+import {
+  LayoutDashboard,
+  AlertTriangle,
+  Clock,
+  Briefcase,
+  Users,
+  ArrowRight,
+  Sparkles,
+  CalendarDays,
+  CheckCircle2,
+} from 'lucide-react';
 import { AnimatedNumber } from '../components/ui/AnimatedNumber';
 import { Spinner } from '../components/ui/Spinner';
 import TaskWorkspace from '../components/dashboard/TaskWorkspace';
-import { useTaskModal } from '../hooks/useTaskModal';
 import { Link } from 'react-router-dom';
 
 type HeroTab = 'proximas' | 'atrasadas' | 'concluidas';
 
 const Dashboard: React.FC = () => {
   const { lawsuits, tasks, contacts, kanbanCards, loading, error, users } = useApp();
-  const { openForEdit } = useTaskModal();
   const [heroTab, setHeroTab] = useState<HeroTab>('proximas');
 
   const today = dayjs().startOf('day');
@@ -96,6 +110,71 @@ const Dashboard: React.FC = () => {
 
   const heroDataset = heroTasks[heroTab] ?? [];
 
+  const heroMetrics = [
+    {
+      label: 'Processos ativos',
+      value: activeLawsuits,
+      description: 'Casos em acompanhamento',
+      icon: Briefcase,
+      accent: 'text-sky-500',
+    },
+    {
+      label: 'Pendências',
+      value: overdueTasks,
+      description: 'Tarefas acima do prazo',
+      icon: AlertTriangle,
+      accent: 'text-rose-500',
+    },
+    {
+      label: 'Concluídas no mês',
+      value: concludedThisMonth,
+      description: 'Resultados entregues',
+      icon: CheckCircle2,
+      accent: 'text-emerald-500',
+    },
+    {
+      label: 'Novos leads',
+      value: newLeads,
+      description: 'Em prospecção ativa',
+      icon: Users,
+      accent: 'text-indigo-500',
+    },
+  ];
+
+  const inProgressTasks = tasks.filter(task => task.status === TaskStatus.Pendente).length;
+  const clientContacts = contacts.filter(contact => contact.status === 'Cliente').length;
+
+  const insightCards = [
+    {
+      title: 'Pipeline ativo',
+      value: kanbanCards.length,
+      description: 'Oportunidades no funil',
+      icon: LayoutDashboard,
+      accent: 'text-indigo-500',
+    },
+    {
+      title: 'Clientes em carteira',
+      value: clientContacts,
+      description: 'Relacionamentos acompanhados',
+      icon: Users,
+      accent: 'text-sky-500',
+    },
+    {
+      title: 'Tarefas em progresso',
+      value: inProgressTasks,
+      description: 'Demandas em andamento',
+      icon: Clock,
+      accent: 'text-amber-500',
+    },
+    {
+      title: 'Equipe online',
+      value: users.length,
+      description: 'Colaboradores ativos',
+      icon: Users,
+      accent: 'text-emerald-500',
+    },
+  ];
+
   const projectCards = [
     {
       title: 'CRM · Pipeline',
@@ -118,20 +197,27 @@ const Dashboard: React.FC = () => {
   ];
 
   return (
-    <div className="space-y-8">
-      <section className="rounded-2xl border border-border/60 bg-white shadow-sm dark:border-dark-border/60 dark:bg-dark-card/70">
-        <div className="flex flex-col gap-4 px-6 py-6 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex flex-col gap-1">
-            <span className="text-[11px] font-semibold uppercase tracking-[0.28em] text-muted-foreground">
-              Hoje é {today.format('dddd, DD [de] MMMM')}
+    <div className="space-y-6">
+      <section className="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-[#F3F8FF] via-[#EAF3FF] to-white px-6 py-7 text-slate-800 shadow-[0_28px_70px_-48px_rgba(15,23,42,0.4)] dark:border-dark-border/60 dark:from-[#1E1B4B] dark:via-[#3730A3] dark:to-[#1E3A8A] dark:text-white">
+        <div className="pointer-events-none absolute inset-0 opacity-60">
+          <div className="absolute -left-24 top-10 h-56 w-56 rounded-full bg-sky-200/60 blur-3xl" />
+          <div className="absolute -bottom-24 right-0 h-64 w-64 rounded-full bg-indigo-200/60 blur-3xl" />
+        </div>
+        <div className="relative grid gap-6 lg:grid-cols-[1.4fr,0.6fr]">
+          <div className="space-y-5">
+            <span className="inline-flex items-center gap-2 rounded-md border border-sky-100 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.32em] text-sky-600 shadow-sm dark:border-white/40 dark:bg-white/10 dark:text-white/80">
+              <Sparkles className="h-4 w-4 text-sky-500 dark:text-white" />
+              Painel diário · {today.format('dddd, DD [de] MMMM')}
             </span>
-            <h1 className="text-xl font-semibold leading-tight text-foreground dark:text-dark-foreground">
-              {heroTitle}
-            </h1>
-            <p className="max-w-xl text-xs text-muted-foreground">
-              Use o painel para visualizar os compromissos prioritários e orientar o time.
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2">
+            <div className="space-y-3">
+              <h1 className="text-[26px] font-semibold leading-tight text-slate-900 lg:text-[32px] dark:text-white">
+                {heroTitle}
+              </h1>
+              <p className="max-w-2xl text-[13px] text-slate-500 lg:text-sm dark:text-white/75">
+                Monitore compromissos, pendências e conquistas com uma visão clara inspirada em painéis leves e sofisticados.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
               {([
                 { key: 'proximas' as HeroTab, label: 'Próximas' },
                 { key: 'atrasadas' as HeroTab, label: 'Atrasadas' },
@@ -142,204 +228,207 @@ const Dashboard: React.FC = () => {
                   type="button"
                   onClick={() => setHeroTab(tab.key)}
                   className={cn(
-                    'rounded-full border px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] transition',
+                    'rounded-md border px-3 py-1.5 text-xs font-semibold transition',
                     heroTab === tab.key
-                      ? 'border-primary/40 bg-primary text-white shadow-sm dark:border-dark-primary/40 dark:bg-dark-primary dark:text-dark-foreground'
-                      : 'border-border/60 bg-white text-muted-foreground hover:border-primary/30 hover:text-primary dark:border-dark-border/60 dark:bg-dark-card/70 dark:hover:border-dark-primary/40 dark:hover:text-dark-primary'
+                      ? 'border-sky-500 bg-sky-500 text-white shadow-sm dark:border-white/60'
+                      : 'border-slate-200 bg-white/70 text-slate-600 hover:border-sky-300 hover:bg-white transition dark:border-white/30 dark:bg-white/10 dark:text-white/80'
                   )}
                 >
                   {tab.label}
                 </button>
               ))}
             </div>
-          </div>
-        <div className="grid w-full max-w-md grid-cols-2 gap-3 text-xs text-muted-foreground">
-          {[ 
-            { label: 'Ativos', value: activeLawsuits, accent: 'text-primary/80', description: 'Processos acompanhados' },
-            { label: 'Pendências', value: overdueTasks, accent: 'text-rose-500', description: 'Tarefas em atraso' },
-            { label: 'Concluídas', value: concludedThisMonth, accent: 'text-emerald-500', description: 'Neste mês' },
-            { label: 'Novos leads', value: newLeads, accent: 'text-sky-500', description: 'Em prospecção' },
-          ].map(card => (
-            <Card
-              key={card.label}
-              className="rounded-xl border border-border/50 bg-white/90 shadow-[0_18px_45px_-30px_rgba(12,10,29,0.35)] dark:border-dark-border/50 dark:bg-dark-card/75"
-            >
-              <CardContent className="space-y-1.5 px-5 py-4">
-                <span className={cn('text-[11px] font-semibold uppercase tracking-[0.18em]', card.accent)}>
-                  {card.label}
-                </span>
-                <AnimatedNumber
-                  value={card.value}
-                  className="text-2xl font-semibold text-foreground dark:text-dark-foreground"
-                />
-                <p className="text-[11px] text-muted-foreground">{card.description}</p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-        </div>
-        <div className="border-t border-border/60 px-6 py-5 dark:border-dark-border/60">
-          <header className="mb-4 flex items-center justify-between gap-3">
-            <div>
-              <h2 className="text-sm font-semibold text-foreground dark:text-dark-foreground">Minhas tarefas</h2>
-              <p className="text-xs text-muted-foreground">{heroDescription}</p>
-            </div>
-            <Button asChild variant="link" className="px-0 text-xs font-semibold text-primary">
+            <Button asChild className="w-fit rounded-md bg-sky-500 px-5 text-sm font-semibold text-white shadow-[0_16px_32px_-20px_rgba(56,189,248,0.9)] transition hover:bg-sky-600">
               <Link to="/tarefas">
-                Ver todas <ArrowRight className="ml-1 h-3 w-3" />
+                Criar tarefa estratégica <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+          <div className="grid gap-3 text-sm text-slate-700 sm:grid-cols-2 dark:text-white">
+            {heroMetrics.map(metric => (
+              <div
+                key={metric.label}
+                className="rounded-xl border border-slate-200 bg-white p-4 shadow-[0_16px_38px_-32px_rgba(15,23,42,0.32)] dark:border-white/25 dark:bg-white/10"
+              >
+                <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-white/70">
+                  <span>{metric.label}</span>
+                  <metric.icon className={cn('h-5 w-5', metric.accent, 'text-opacity-80 dark:text-white')} />
+                </div>
+                <AnimatedNumber
+                  value={metric.value}
+                  className="mt-3 text-2xl font-semibold text-slate-900 dark:text-white"
+                />
+                <p className="mt-1 text-xs text-slate-500 dark:text-white/70">{metric.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-6 rounded-xl border border-slate-200 bg-white/80 p-5 shadow-[0_22px_58px_-46px_rgba(15,23,42,0.32)] backdrop-blur-md dark:border-white/15 dark:bg-white/10">
+          <header className="mb-3 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-semibold text-slate-800 dark:text-white">Minhas tarefas</h2>
+              <p className="text-[11px] text-slate-500 dark:text-white/70">{heroDescription}</p>
+            </div>
+            <Button
+              asChild
+              variant="ghost"
+              className="rounded-md border border-slate-200 px-3 text-[11px] font-semibold text-slate-600 hover:border-sky-300 hover:bg-sky-50 hover:text-sky-600 dark:border-white/25 dark:text-white dark:hover:bg-white/15"
+            >
+              <Link to="/tarefas">
+                Ver todas <ArrowRight className="ml-2 h-3 w-3" />
               </Link>
             </Button>
           </header>
           {heroDataset.length === 0 ? (
-            <p className="rounded-lg border border-dashed border-border/60 bg-white p-6 text-center text-xs text-muted-foreground dark:border-dark-border/60 dark:bg-dark-card/70">
+            <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-4 py-5 text-center text-xs text-slate-500 dark:border-white/30 dark:bg-white/10 dark:text-white/70">
               Nenhuma tarefa nesta categoria por enquanto.
             </p>
           ) : (
-            <div className="grid gap-3 text-sm">
+            <div className="grid gap-2 text-sm">
               {heroDataset.map(task => (
-                <button
+                <Link
                   key={task.id}
-                  type="button"
-                  onClick={() => openForEdit(task)}
-                  className="flex w-full items-center justify-between rounded-lg border border-transparent bg-muted/20 px-4 py-3 text-left transition hover:-translate-y-0.5 hover:border-primary/40 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 dark:bg-dark-border/30 dark:hover:bg-dark-border/40"
+                  to={`/tarefas/${task.id}`}
+                  className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-sky-300 hover:bg-sky-50 dark:border-white/20 dark:bg-white/10 dark:text-white dark:hover:border-white/40"
                 >
                   <div>
-                    <p className="text-sm font-medium text-foreground dark:text-dark-foreground">{task.title}</p>
-                    <span className="text-xs text-muted-foreground">
-                      Prazo: {dayjs(task.deadline).format('DD MMM')} · Responsável{' '}
-                      {users.find(u => u.id === task.responsibleId)?.name ?? 'Equipe'}
+                    <p className="text-sm font-semibold text-slate-800 dark:text-white">{task.title}</p>
+                    <span className="text-xs text-slate-500 dark:text-white/70">
+                      Prazo {dayjs(task.deadline).format('DD MMM')} ·{' '}
+                      {users.find(u => u.id === task.responsibleId)?.name ?? 'Equipe responsável'}
                     </span>
                   </div>
                   <span
                     className={cn(
-                      'rounded-lg px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]',
+                      'rounded-md px-3 py-1 text-[11px] font-semibold uppercase tracking-wide shadow-sm',
                       task.status === TaskStatus.Concluida
-                        ? 'bg-emerald-100 text-emerald-600'
+                        ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-400/20 dark:text-emerald-100'
                         : dayjs(task.deadline).isBefore(today, 'day')
-                        ? 'bg-rose-100 text-rose-600'
-                        : 'bg-indigo-100 text-indigo-600'
+                        ? 'bg-rose-100 text-rose-600 dark:bg-rose-400/25 dark:text-rose-100'
+                        : 'bg-sky-100 text-sky-600 dark:bg-sky-400/25 dark:text-sky-100'
                     )}
                   >
                     {task.status}
                   </span>
-                </button>
+                </Link>
               ))}
             </div>
           )}
         </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="rounded-xl border border-border/60 bg-white shadow-sm dark:border-dark-border/60 dark:bg-dark-card/70">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Processos ativos</CardTitle>
-            <Briefcase className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <AnimatedNumber value={activeLawsuits} className="text-2xl font-semibold text-foreground dark:text-dark-foreground" />
-            <p className="mt-1 text-xs text-muted-foreground">Casos em andamento</p>
-          </CardContent>
-        </Card>
-        <Card className="rounded-xl border border-border/60 bg-white shadow-sm dark:border-dark-border/60 dark:bg-dark-card/70">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Tarefas atrasadas</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-rose-500" />
-          </CardHeader>
-          <CardContent>
-            <AnimatedNumber value={overdueTasks} className="text-2xl font-semibold text-rose-500" />
-            <p className="mt-1 text-xs text-muted-foreground">Pendências acima do prazo</p>
-          </CardContent>
-        </Card>
-        <Card className="rounded-xl border border-border/60 bg-white shadow-sm dark:border-dark-border/60 dark:bg-dark-card/70">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Novos leads</CardTitle>
-            <LayoutDashboard className="h-4 w-4 text-indigo-500" />
-          </CardHeader>
-          <CardContent>
-            <AnimatedNumber value={kanbanCards.length} className="text-2xl font-semibold text-indigo-500" />
-            <p className="mt-1 text-xs text-muted-foreground">Itens no pipeline</p>
-          </CardContent>
-        </Card>
-        <Card className="rounded-xl border border-border/60 bg-white shadow-sm dark:border-dark-border/60 dark:bg-dark-card/70">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Horas do time</CardTitle>
-            <Clock className="h-4 w-4 text-emerald-500" />
-          </CardHeader>
-          <CardContent>
-            <AnimatedNumber value={tasks.length * 1.5} className="text-2xl font-semibold text-emerald-500" />
-            <p className="mt-1 text-xs text-muted-foreground">Estimativa investida na semana</p>
-          </CardContent>
-        </Card>
+      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        {insightCards.map(card => (
+          <Card
+            key={card.title}
+            className="group rounded-xl border border-slate-200 bg-white p-4 shadow-[0_18px_50px_-40px_rgba(15,23,42,0.38)] transition hover:-translate-y-0.5 hover:border-sky-300 hover:shadow-[0_24px_55px_-44px_rgba(30,64,175,0.4)] dark:border-dark-border/60 dark:bg-dark-surface"
+          >
+            <CardHeader className="flex items-center justify-between pb-2">
+              <CardTitle className="text-sm font-semibold text-slate-800 dark:text-dark-foreground">
+                {card.title}
+              </CardTitle>
+              <card.icon className={cn('h-4 w-4', card.accent)} />
+            </CardHeader>
+            <CardContent className="space-y-1">
+              <AnimatedNumber
+                value={card.value}
+                className="text-2xl font-semibold text-slate-900 dark:text-dark-foreground"
+              />
+              <p className="text-xs text-slate-500">{card.description}</p>
+            </CardContent>
+          </Card>
+        ))}
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-3">
-        <div className="space-y-4 rounded-xl border border-border/60 bg-white p-6 shadow-sm dark:border-dark-border/60 dark:bg-dark-card/70 lg:col-span-2">
-          <header className="flex items-center justify-between">
-            <div>
-              <h2 className="text-base font-semibold text-foreground dark:text-dark-foreground">
-                Projetos em destaque
-              </h2>
-              <p className="text-xs text-muted-foreground">
-                Continue de onde parou com acessos rápidos.
-              </p>
-            </div>
-            <Button variant="ghost" size="sm" className="rounded-full text-xs font-semibold text-primary">
-              Ver todos <ArrowRight className="ml-1 h-3 w-3" />
-            </Button>
-          </header>
-          <div className="grid gap-3 md:grid-cols-3">
+      <section className="grid gap-5 xl:grid-cols-[1.2fr,0.8fr]">
+        <Card className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_20px_56px_-44px_rgba(15,23,42,0.42)] dark:border-dark-border/60 dark:bg-dark-surface">
+          <CardHeader className="flex flex-col gap-2 pb-3">
+            <CardTitle className="text-sm font-semibold text-slate-900 dark:text-dark-foreground">
+              Projetos em destaque
+            </CardTitle>
+            <CardDescription className="text-xs">
+              Continue de onde parou com acessos refinados às áreas mais acionadas.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-3 md:grid-cols-3">
             {projectCards.map(project => (
               <Card
                 key={project.title}
-                className="group flex flex-col gap-3 rounded-xl border border-border/60 bg-white p-4 shadow-sm transition hover:-translate-y-[1px] hover:border-primary/50 hover:shadow-lg dark:border-dark-border/60 dark:bg-dark-card/70"
+                className="group flex h-full flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50/60 p-4 shadow-[0_18px_48px_-40px_rgba(15,23,42,0.32)] transition hover:-translate-y-[1px] hover:border-sky-300 hover:bg-white dark:border-dark-border/60 dark:bg-dark-surface-muted"
               >
-                <project.icon className="h-6 w-6 text-primary" />
-                <div className="flex-1">
-                  <h3 className="text-sm font-semibold text-foreground dark:text-dark-foreground">
+                <div className="flex h-9 w-9 items-center justify-center rounded-md bg-sky-100 text-sky-600 dark:bg-dark-primary/15 dark:text-dark-primary">
+                  <project.icon className="h-5 w-5" />
+                </div>
+                <div className="flex-1 space-y-1">
+                  <h3 className="text-sm font-semibold text-slate-800 dark:text-dark-foreground">
                     {project.title}
                   </h3>
-                  <p className="text-xs text-muted-foreground">{project.description}</p>
+                  <p className="text-xs text-slate-500">{project.description}</p>
                 </div>
-                <Button variant="ghost" size="sm" className="self-start rounded-lg px-3 text-xs font-semibold text-primary" asChild>
-                  <a href={project.href}>
+                <Button
+                  asChild
+                  variant="ghost"
+                  size="sm"
+                  className="self-start rounded-md border border-slate-200 px-3 text-xs font-semibold text-sky-600 transition hover:border-sky-300 hover:bg-sky-50 dark:border-transparent dark:text-primary"
+                >
+                  <Link to={project.href}>
                     Abrir projeto <ArrowRight className="ml-1 h-3 w-3" />
-                  </a>
+                  </Link>
                 </Button>
               </Card>
             ))}
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
-        <Card className="rounded-xl border border-border/60 bg-white p-6 shadow-sm dark:border-dark-border/60 dark:bg-dark-card/70">
-          <CardHeader>
-            <CardTitle className="text-base font-semibold text-foreground dark:text-dark-foreground">
+        <Card className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_20px_56px_-44px_rgba(15,23,42,0.42)] dark:border-dark-border/60 dark:bg-dark-surface">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-semibold text-slate-900 dark:text-dark-foreground">
               Alertas rápidos
             </CardTitle>
-            <p className="text-xs text-muted-foreground">
-              Os principais pontos de atenção para o time jurídico.
-            </p>
+            <CardDescription className="text-xs">
+              Priorize pendências e celebre entregas do dia.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-3 text-sm">
-              {overdueList.map(task => (
-                <div key={task.id} className="rounded-xl border border-rose-200 bg-rose-50/80 px-3 py-2 text-rose-600 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200">
-                  <p className="font-medium">{task.title}</p>
-                  <span className="text-[11px]">
-                    Prazo {dayjs(task.deadline).format('DD MMM')} · Responsável{' '}
-                    {users.find(u => u.id === task.responsibleId)?.name ?? 'Equipe'}
-                  </span>
-                </div>
-              ))}
+              {overdueList.length === 0 ? (
+                <p className="rounded-lg border border-dashed border-emerald-200 bg-emerald-50 px-4 py-3 text-center text-emerald-600 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200">
+                  Nenhuma pendência crítica. Excelente ritmo!
+                </p>
+              ) : (
+                overdueList.map(task => (
+                  <div
+                    key={task.id}
+                    className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-rose-600 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200"
+                  >
+                    <p className="font-medium">{task.title}</p>
+                    <span className="text-[11px]">
+                      Prazo {dayjs(task.deadline).format('DD MMM')} ·{' '}
+                      {users.find(u => u.id === task.responsibleId)?.name ?? 'Equipe'}
+                    </span>
+                  </div>
+                ))
+              )}
             </div>
             <div className="space-y-3 text-sm">
-              {completedToday.map(task => (
-                <div key={task.id} className="rounded-xl border border-emerald-200 bg-emerald-50/80 px-3 py-2 text-emerald-600 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200">
-                  <p className="font-medium">{task.title}</p>
-                  <span className="text-[11px]">
-                    Concluída por {users.find(u => u.id === task.responsibleId)?.name ?? 'Equipe'}
-                  </span>
-                </div>
-              ))}
+              {completedToday.length === 0 ? (
+                <p className="rounded-lg border border-dashed border-emerald-200 bg-emerald-50/70 px-4 py-3 text-center text-emerald-600 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200">
+                  Ainda não há entregas hoje. Que tal concluir uma tarefa agora?
+                </p>
+              ) : (
+                completedToday.map(task => (
+                  <div
+                    key={task.id}
+                    className="rounded-lg border border-emerald-200 bg-emerald-50/80 px-3 py-2 text-emerald-600 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200"
+                  >
+                    <p className="font-medium">{task.title}</p>
+                    <span className="text-[11px]">
+                      Concluída por {users.find(u => u.id === task.responsibleId)?.name ?? 'Equipe'}
+                    </span>
+                  </div>
+                ))
+              )}
             </div>
           </CardContent>
         </Card>

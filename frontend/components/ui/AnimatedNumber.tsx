@@ -4,6 +4,7 @@ import React, { useEffect, useState, useRef } from 'react';
 interface AnimatedNumberProps extends React.HTMLAttributes<HTMLSpanElement> {
   value: number;
   duration?: number;
+  className?: string;
 }
 
 const AnimatedNumber = ({ value, duration = 1000, ...props }: AnimatedNumberProps) => {

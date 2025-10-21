@@ -9,7 +9,7 @@ class CalendarEvent extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['title','start','end','color','user_id'];
+    protected $fillable = ['tenant_id','title','start','end','color','user_id'];
 
     protected $casts = [
         'start' => 'datetime',
@@ -19,5 +19,10 @@ class CalendarEvent extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function tenant()
+    {
+        return $this->belongsTo(Tenant::class);
     }
 }

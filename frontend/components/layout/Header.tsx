@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Search, Bell, Sun, Moon, Plus, Menu, LogOut, User as UserIcon, Settings as SettingsIcon, ChevronDown } from 'lucide-react';
+import { Search, Sun, Moon, Plus, Menu, LogOut, User as UserIcon, Settings as SettingsIcon, ChevronDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../hooks/useTheme';
 import { Button } from '../ui/Button';
+import NotificationBell from '../notifications/NotificationBell';
 import { useCommandPalette } from '../../hooks/useCommandPalette';
 import { useApp } from '../../store/AppContext';
 import { useAuth } from '../../store/AuthContext';
@@ -16,7 +17,7 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
   const { theme, setTheme } = useTheme();
   const { setIsOpen } = useCommandPalette();
   const { users, contacts } = useApp();
-  const { user: authUser, logout } = useAuth();
+  const { user: authUser, tenant, logout } = useAuth();
   const currentUser = authUser ?? users[0];
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -129,19 +130,24 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
   const showResults = isSearchFocused && query.trim().length >= 2;
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border/50 bg-white/90 backdrop-blur-lg transition dark:border-dark-border/60 dark:bg-dark-card/70">
-      <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-6 py-3 lg:px-10">
+    <header className="sticky top-0 z-40 border-b border-slate-200 bg-surface/95 backdrop-blur-lg transition dark:border-dark-border/60 dark:bg-dark-surface/90">
+      <div className="mx-auto flex w-full max-w-[1180px] items-center justify-between gap-3 px-5 py-2 lg:px-7">
         <div className="flex flex-1 items-center" ref={searchRef}>
           <button
             onClick={onToggleSidebar}
-            className="mr-2 inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border/60 bg-white text-muted-foreground transition hover:border-primary/40 hover:text-primary dark:border-dark-border/60 dark:bg-dark-background/70 dark:text-dark-muted md:hidden"
+            className="mr-2 inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 bg-white text-muted-foreground transition hover:border-primary/40 hover:text-primary dark:border-dark-border/60 dark:bg-dark-background/70 dark:text-dark-muted md:hidden"
             aria-label="Abrir menu"
           >
             <Menu className="h-4 w-4" />
           </button>
+          {tenant && (
+            <span className="mr-3 hidden items-center gap-2 rounded-lg border border-primary/40 bg-primary/5 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-primary dark:border-dark-primary/40 dark:bg-dark-primary/10 dark:text-dark-primary md:inline-flex">
+              {tenant.slug}
+            </span>
+          )}
           <div className="relative flex w-full max-w-xl flex-col">
-            <div className="group flex items-center gap-3 rounded-lg border border-border/60 bg-white px-3 py-2 text-xs text-muted-foreground/90 shadow-sm transition hover:border-primary/40 hover:text-primary dark:border-dark-border/60 dark:bg-dark-background/70 dark:text-dark-muted/80">
-              <Search className="h-4 w-4 text-muted-foreground/80 transition group-hover:text-primary" />
+            <div className="group flex items-center gap-3 rounded-lg border border-slate-200 bg-surface px-3 py-2 text-[13px] text-muted-foreground shadow-sm transition hover:border-primary/50 hover:text-primary dark:border-dark-border/60 dark:bg-dark-surface dark:text-dark-muted">
+              <Search className="h-4 w-4 text-muted-foreground transition group-hover:text-primary" />
               <input
                 ref={searchInputRef}
                 value={query}
@@ -149,19 +155,19 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
                 onFocus={() => setIsSearchFocused(true)}
                 onKeyDown={handleSearchKeyDown}
                 placeholder="Buscar clientes por nome..."
-                className="flex-1 border-none bg-transparent text-[13px] font-medium tracking-tight text-foreground placeholder:text-muted-foreground focus:outline-none dark:text-dark-foreground"
+                className="flex-1 border-none bg-transparent text-[13px] font-medium text-foreground placeholder:text-muted-foreground focus:outline-none dark:text-dark-foreground"
               />
               <button
                 type="button"
                 onClick={() => setIsOpen(true)}
-                className="hidden items-center gap-1 rounded border border-border/60 bg-white px-2 py-0.5 text-[10px] font-semibold text-muted-foreground transition hover:border-primary/40 hover:text-primary dark:border-dark-border/60 dark:bg-dark-card/70 md:inline-flex"
+                className="hidden items-center gap-1 rounded-md border border-slate-200 bg-surface px-2 py-1 text-[11px] font-medium text-muted-foreground transition hover:border-primary/40 hover:text-primary dark:border-dark-border/60 dark:bg-dark-surface dark:text-dark-muted md:inline-flex"
               >
                 ⌘ K
               </button>
             </div>
             {showResults && (
-              <div className="absolute left-0 right-0 top-full z-40 mt-2 overflow-hidden rounded-xl border border-border/60 bg-white/95 shadow-xl backdrop-blur-md dark:border-dark-border/60 dark:bg-dark-card/95">
-                <div className="border-b border-border/60 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.3em] text-muted-foreground/70 dark:border-dark-border/60">
+              <div className="absolute left-0 right-0 top-full z-40 mt-2 overflow-hidden rounded-lg border border-slate-200 bg-surface shadow-xl dark:border-dark-border/60 dark:bg-dark-surface">
+                <div className="border-b border-slate-200 px-3 py-2 text-xs font-semibold text-muted-foreground dark:border-dark-border/60">
                   Clientes
                 </div>
                 <div className="max-h-64 overflow-y-auto py-1">
@@ -174,8 +180,8 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
                         onClick={() => handleSelectContact(contact)}
                         className={`flex w-full flex-col items-start gap-1 px-3 py-2 text-left text-sm transition ${
                           index === activeIndex
-                            ? 'bg-primary/10 text-primary dark:bg-dark-primary/15 dark:text-dark-primary'
-                            : 'hover:bg-muted/30 dark:hover:bg-dark-border/40'
+                            ? 'bg-primary/10 text-foreground dark:bg-dark-primary/15 dark:text-dark-foreground'
+                            : 'hover:bg-surface-muted dark:hover:bg-dark-surface-muted'
                         }`}
                         onMouseEnter={() => setActiveIndex(index)}
                       >
@@ -202,7 +208,7 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
         <div className="flex items-center gap-2">
           <Button
             size="sm"
-            className="hidden rounded-md bg-primary px-3 text-xs font-semibold text-white shadow-sm transition hover:brightness-105 focus-visible:ring-2 focus-visible:ring-primary/50 sm:inline-flex"
+            className="inline-flex rounded-md bg-primary px-3 text-[12px] font-semibold text-white shadow-sm transition hover:brightness-105 focus-visible:ring-2 focus-visible:ring-primary/40"
             onClick={() => setIsOpen(true)}
           >
             <Plus className="mr-2 h-3 w-3" />
@@ -212,43 +218,32 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
             variant="ghost"
             size="icon"
             onClick={toggleTheme}
-            className="rounded-full border border-border/50 bg-white/80 text-muted-foreground hover:bg-primary/10 hover:text-primary dark:border-dark-border/50 dark:bg-dark-card/80 dark:hover:bg-dark-primary/15 dark:hover:text-dark-primary"
+            className="rounded-md border border-slate-200 bg-surface text-muted-foreground hover:border-primary/50 hover:bg-primary/10 hover:text-primary dark:border-dark-border/60 dark:bg-dark-surface dark:hover:bg-dark-primary/15 dark:hover:text-dark-primary"
           >
             {theme === 'light' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
             <span className="sr-only">Alternar tema</span>
           </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="rounded-full border border-border/50 bg-white/80 text-muted-foreground hover:bg-primary/10 hover:text-primary dark:border-dark-border/50 dark:bg-dark-card/80 dark:hover:bg-dark-primary/15 dark:hover:text-dark-primary"
-          >
-            <Bell className="h-4 w-4" />
-            <span className="sr-only">Notificações</span>
-          </Button>
+          <NotificationBell />
           <div className="relative" ref={menuRef}>
             {currentUser ? (
               <button
                 type="button"
                 onClick={() => setIsMenuOpen(prev => !prev)}
-                className="flex items-center gap-2 rounded-lg border border-border/60 bg-white px-2.5 py-1 shadow-sm transition hover:border-primary/40 hover:bg-primary/5 dark:border-dark-border/60 dark:bg-dark-card/80 dark:hover:border-dark-primary/40 dark:hover:bg-dark-primary/10"
+                className="flex items-center gap-2 rounded-lg border border-slate-200 bg-surface px-2.5 py-1.5 shadow-sm transition hover:border-primary/40 hover:bg-surface-muted dark:border-dark-border/60 dark:bg-dark-surface dark:hover:border-dark-primary/40 dark:hover:bg-dark-surface-muted"
               >
                 <img
                   src={currentUser.avatar}
                   alt={currentUser.name}
-                  className="h-8 w-8 rounded-full object-cover"
+                  className="h-8 w-8 rounded-lg object-cover"
                 />
                 <div className="hidden text-left text-[11px] leading-tight md:block">
                   <p className="font-semibold text-foreground dark:text-dark-foreground">
                     {currentUser.name}
                   </p>
                   {currentUser.jobTitle ? (
-                    <span className="text-[10px] uppercase tracking-[0.28em] text-primary/70">
-                      {currentUser.jobTitle}
-                    </span>
+                    <span className="text-xs font-medium text-muted-foreground">{currentUser.jobTitle}</span>
                   ) : (
-                    <span className="text-[10px] text-muted-foreground">
-                      {currentUser.email}
-                    </span>
+                    <span className="text-xs text-muted-foreground">{currentUser.email}</span>
                   )}
                 </div>
                 <ChevronDown className="h-4 w-4 text-muted-foreground transition md:block" />
@@ -258,18 +253,23 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
             )}
 
             {isMenuOpen && (
-              <div className="absolute right-0 mt-3 w-56 overflow-hidden rounded-xl border border-border/70 bg-white shadow-lg backdrop-blur-sm dark:border-dark-border/70 dark:bg-dark-card/90">
-                <div className="border-b border-border/60 px-4 py-3 text-xs text-muted-foreground dark:border-dark-border/60">
+              <div className="absolute right-0 mt-3 w-56 overflow-hidden rounded-lg border border-slate-200 bg-surface shadow-lg dark:border-dark-border/70 dark:bg-dark-surface">
+                <div className="border-b border-slate-200 px-4 py-3 text-xs text-muted-foreground dark:border-dark-border/60">
                   <p className="font-semibold text-foreground dark:text-dark-foreground">
                     {currentUser?.name}
                   </p>
                   <span>{currentUser?.email}</span>
+                  {tenant && (
+                    <span className="mt-2 inline-flex items-center rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-primary dark:bg-dark-primary/15 dark:text-dark-primary">
+                      {tenant.name}
+                    </span>
+                  )}
                 </div>
                 <div className="p-1">
                   <button
                     type="button"
                     onClick={() => handleNavigate('/perfil')}
-                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition hover:bg-primary/10 hover:text-primary dark:hover:bg-dark-primary/15 dark:hover:text-dark-primary"
+                    className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition hover:bg-surface-muted hover:text-foreground dark:hover:bg-dark-surface-muted dark:hover:text-dark-foreground"
                   >
                     <UserIcon className="h-4 w-4" />
                     Perfil
@@ -277,17 +277,17 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
                   <button
                     type="button"
                     onClick={() => handleNavigate('/config')}
-                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition hover:bg-primary/10 hover:text-primary dark:hover:bg-dark-primary/15 dark:hover:text-dark-primary"
+                    className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition hover:bg-surface-muted hover:text-foreground dark:hover:bg-dark-surface-muted dark:hover:text-dark-foreground"
                   >
                     <SettingsIcon className="h-4 w-4" />
                     Configurações
                   </button>
                 </div>
-                <div className="border-t border-border/60 bg-muted/20 px-1 py-1 dark:border-dark-border/60 dark:bg-dark-card/70">
+                <div className="border-t border-slate-200 bg-surface-muted px-1 py-1 dark:border-dark-border/60 dark:bg-dark-surface-muted">
                   <button
                     type="button"
                     onClick={handleLogout}
-                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-semibold text-red-500 transition hover:bg-red-50 dark:text-red-300 dark:hover:bg-red-500/10"
+                    className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-semibold text-red-500 transition hover:bg-red-50 dark:text-red-300 dark:hover:bg-red-500/10"
                   >
                     <LogOut className="h-4 w-4" />
                     Sair

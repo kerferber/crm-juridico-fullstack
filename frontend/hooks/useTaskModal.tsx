@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
-import { Task, TaskStatus } from '../types/types';
+import { Task, TaskStatus, MentionReference } from '../types/types';
 
 type TaskModalMode = 'create' | 'edit';
 
@@ -12,6 +12,9 @@ export interface TaskModalDefaults {
   clientId?: number;
   status?: TaskStatus;
   score?: number;
+  categoryId?: string;
+  notes?: string;
+  mentions?: MentionReference[];
 }
 
 interface TaskModalContextValue {

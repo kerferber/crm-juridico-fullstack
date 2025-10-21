@@ -21,6 +21,7 @@ import { useTaskModal } from '../hooks/useTaskModal';
 import { useProcessModal } from '../hooks/useProcessModal';
 import { Button } from '../components/ui/Button';
 import dayjs from 'dayjs';
+import MentionBadges from '../components/mentions/MentionBadges';
 
 const ContactDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -55,10 +56,11 @@ const ContactDetail: React.FC = () => {
   const activeProcessesCount = contactLawsuits.filter(l => l.status === 'Ativo').length;
 
   const sortedTasks = [...contactTasks].sort((a, b) => {
-    const aDate = a.deadline ? dayjs(a.deadline) : dayjs.invalid();
-    const bDate = b.deadline ? dayjs(b.deadline) : dayjs.invalid();
-    if (!aDate.isValid()) return 1;
-    if (!bDate.isValid()) return -1;
+    const aDate = a.deadline ? dayjs(a.deadline) : null;
+    const bDate = b.deadline ? dayjs(b.deadline) : null;
+    if (!aDate && !bDate) return 0;
+    if (!aDate) return 1;
+    if (!bDate) return -1;
     return aDate.valueOf() - bDate.valueOf();
   });
 
@@ -197,6 +199,24 @@ const ContactDetail: React.FC = () => {
           </span>
         </div>
       </div>
+
+      {(contact.notes || (contact.mentions && contact.mentions.length > 0)) && (
+        <Card className="border border-border/60 shadow-sm dark:border-dark-border/60 dark:bg-dark-card/80">
+          <CardHeader className="flex items-center justify-between">
+            <CardTitle className="text-base font-semibold">Notas internas</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm text-muted-foreground">
+            {contact.notes ? (
+              <p className="whitespace-pre-line text-foreground dark:text-dark-foreground">
+                {contact.notes}
+              </p>
+            ) : (
+              <p className="italic">Sem notas registradas.</p>
+            )}
+            <MentionBadges mentions={contact.mentions} users={users} contacts={contacts} />
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-[1.4fr,1fr]">
         <Card className="border border-border/60 shadow-sm dark:border-dark-border/60 dark:bg-dark-card/80">

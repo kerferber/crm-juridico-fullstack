@@ -12,6 +12,7 @@ class User extends Authenticatable
     use HasApiTokens, HasFactory, Notifiable;
 
     protected $fillable = [
+        'tenant_id',
         'name',
         'email',
         'password',
@@ -29,9 +30,17 @@ class User extends Authenticatable
         'linkedin_url',
         'instagram_url',
         'bio',
+        'is_tenant_admin',
+        'last_login_at',
     ];
 
     protected $hidden = ['password','remember_token'];
+
+    protected $casts = [
+        'is_tenant_admin' => 'boolean',
+        'birthdate' => 'date',
+        'last_login_at' => 'datetime',
+    ];
 
     public function contacts()
     {
@@ -46,5 +55,10 @@ class User extends Authenticatable
     public function tasks()
     {
         return $this->hasMany(Task::class, 'responsible_id');
+    }
+
+    public function tenant()
+    {
+        return $this->belongsTo(Tenant::class);
     }
 }

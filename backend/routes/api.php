@@ -1,6 +1,8 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\Admin\AdminAuthController;
+use App\Http\Controllers\Api\Admin\AdminMetricsController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\ContactController;
@@ -10,6 +12,19 @@ use App\Http\Controllers\Api\V1\CalendarEventController;
 use App\Http\Controllers\Api\V1\TransactionController;
 use App\Http\Controllers\Api\V1\GamificationController;
 use App\Http\Controllers\Api\V1\DashboardController;
+use App\Http\Controllers\Api\V1\TenantController;
+
+Route::prefix('admin')->group(function () {
+    Route::post('login', [AdminAuthController::class, 'login']);
+
+    Route::middleware(['auth:sanctum', 'admin.auth'])->group(function () {
+        Route::post('logout', [AdminAuthController::class, 'logout']);
+        Route::get('tenants', [TenantController::class, 'index']);
+        Route::post('tenants', [TenantController::class, 'store']);
+        Route::get('metrics/overview', [AdminMetricsController::class, 'overview']);
+        Route::get('metrics/timeseries', [AdminMetricsController::class, 'timeseries']);
+    });
+});
 
 Route::prefix('auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);

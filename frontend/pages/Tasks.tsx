@@ -1,7 +1,15 @@
 import React, { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
-import { LayoutGrid, LayoutList, Plus } from 'lucide-react';
+import {
+  AlertTriangle,
+  CalendarDays,
+  CheckCircle2,
+  LayoutGrid,
+  LayoutList,
+  Plus,
+  Sparkles,
+} from 'lucide-react';
 import { useApp } from '../store/AppContext';
 import { TaskStatus } from '../types/types';
 import { useTaskModal } from '../hooks/useTaskModal';
@@ -57,36 +65,108 @@ const Tasks: React.FC = () => {
     [filteredTasks, today]
   );
 
+  const metrics = useMemo(() => {
+    const dueToday = myTasks.filter(task => dayjs(task.dueDate).isSame(today, 'day')).length;
+    const overdue = myTasks.filter(
+      task => task.status !== TaskStatus.Concluida && dayjs(task.deadline).isBefore(today, 'day')
+    ).length;
+    const completedLastWeek = myTasks.filter(task => {
+      if (task.status !== TaskStatus.Concluida) return false;
+      const due = dayjs(task.dueDate);
+      const start = today.subtract(6, 'day');
+      return due.isBetween(start, today, 'day', '[]');
+    }).length;
+
+    return {
+      dueToday,
+      overdue,
+      completedLastWeek,
+    };
+  }, [myTasks, today]);
+
   const noTasks = sections.every(section => section.tasks.length === 0);
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-lg font-semibold tracking-tight">Tarefas</h1>
-          <p className="text-xs text-muted-foreground">
-            Organize prioridades e alterne entre visão em lista ou quadro.
-          </p>
+    <div className="space-y-6">
+      <section className="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-[#F4F7FF] via-[#E9F2FF] to-white px-6 py-7 text-slate-800 shadow-[0_28px_70px_-48px_rgba(15,23,42,0.4)]">
+        <div className="pointer-events-none absolute inset-0 opacity-[0.4]">
+          <div className="absolute -left-28 top-6 h-56 w-56 rounded-full bg-sky-200/70 blur-3xl" />
+          <div className="absolute -bottom-24 right-0 h-64 w-64 rounded-full bg-indigo-200/70 blur-3xl" />
         </div>
-        <Button
-          size="sm"
-          className="rounded-md px-3 text-xs font-semibold shadow-[0_12px_24px_-20px_rgba(79,70,229,0.4)]"
-          onClick={openTaskModal}
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Nova tarefa
-        </Button>
-      </div>
+        <div className="relative grid gap-6 lg:grid-cols-[1.2fr,0.8fr]">
+          <div className="space-y-5">
+            <span className="inline-flex items-center gap-2 rounded-md border border-sky-100 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.32em] text-sky-600 shadow-sm dark:border-white/40 dark:bg-white/10 dark:text-white/80">
+              <Sparkles className="h-4 w-4 text-sky-500 dark:text-white" />
+              Minhas tarefas
+            </span>
+            <div className="space-y-3">
+              <h1 className="text-[26px] font-semibold leading-tight text-slate-900 lg:text-[32px] dark:text-white">
+                Domine seu fluxo com uma experiência premium.
+              </h1>
+              <p className="max-w-2xl text-[13px] text-slate-500 lg:text-sm dark:text-white/75">
+                Combine filtros inteligentes, escolha a visualização ideal e mantenha prazos críticos sob controle em um ambiente elegante e responsivo.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2.5">
+              <Button className="rounded-md bg-sky-500 px-5 text-sm font-semibold text-white shadow-[0_18px_40px_-25px_rgba(56,189,248,0.5)] transition hover:bg-sky-600" onClick={openTaskModal}>
+                <Plus className="mr-2 h-4 w-4" />
+                Nova tarefa
+              </Button>
+              <Button
+                variant="ghost"
+                className="rounded-md border border-slate-200 bg-white/80 px-5 text-sm font-semibold text-slate-600 shadow-inner transition hover:border-sky-300 hover:text-sky-600 dark:border-white/30 dark:bg-white/10 dark:text-white"
+                onClick={() => setActiveTab('week')}
+              >
+                <CalendarDays className="mr-2 h-4 w-4" />
+                Resumo semanal
+              </Button>
+            </div>
+          </div>
+          <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 text-slate-700 shadow-[0_20px_56px_-40px_rgba(15,23,42,0.32)] backdrop-blur-sm dark:border-white/20 dark:bg-white/10 dark:text-white">
+            <div className="rounded-lg border border-slate-200 bg-white/90 px-4 py-4 shadow-[0_18px_36px_-30px_rgba(15,23,42,0.28)] dark:border-white/25 dark:bg-white/10">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.26em] text-slate-500 dark:text-white/65">Hoje</p>
+              <p className="mt-2 text-3xl font-semibold text-slate-900 dark:text-white">{today.format('DD MMMM')}</p>
+              <p className="text-xs text-slate-500 dark:text-white/75">
+                {metrics.dueToday === 0
+                  ? 'Sem entregas para hoje — aproveite para antecipar próximos passos.'
+                  : `${metrics.dueToday} tarefa(s) com prazo hoje. Faça acontecer!`}
+              </p>
+            </div>
+            <div className="grid gap-3 text-xs text-slate-600 dark:text-white">
+              <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50/70 px-4 py-3 shadow-[0_16px_32px_-26px_rgba(15,23,42,0.26)] dark:border-white/25 dark:bg-white/10">
+                <span className="inline-flex items-center gap-2 font-semibold text-amber-500 dark:text-amber-100">
+                  <AlertTriangle className="h-4 w-4" />
+                  Atrasadas
+                </span>
+                <span className="text-base font-semibold text-slate-900 dark:text-white">{metrics.overdue}</span>
+              </div>
+              <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50/70 px-4 py-3 shadow-[0_16px_32px_-26px_rgba(15,23,42,0.26)] dark:border-white/25 dark:bg-white/10">
+                <span className="inline-flex items-center gap-2 font-semibold text-emerald-500 dark:text-emerald-100">
+                  <CheckCircle2 className="h-4 w-4" />
+                  Concluídas (7 dias)
+                </span>
+                <span className="text-base font-semibold text-slate-900 dark:text-white">
+                  {metrics.completedLastWeek}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
-      <Card>
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+
+      <Card className="border border-slate-200 bg-white shadow-[0_18px_48px_-38px_rgba(15,23,42,0.3)] dark:border-dark-border/60 dark:bg-dark-card/80">
         <CardHeader>
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <CardTitle>Minha lista de tarefas</CardTitle>
-              <CardDescription>Filtre por período e escolha como deseja visualizar.</CardDescription>
+              <CardTitle className="text-base text-slate-900 dark:text-dark-foreground">Minha lista de tarefas</CardTitle>
+              <CardDescription className="text-[12px]">
+                Filtre por período e escolha como deseja visualizar.
+              </CardDescription>
             </div>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-              <div className="inline-flex rounded-lg border border-border/60 bg-white p-1 text-muted-foreground dark:border-dark-border/60 dark:bg-dark-background/70">
+              <div className="inline-flex rounded-md border border-slate-200 bg-white p-1 text-slate-500 shadow-sm dark:border-dark-border/60 dark:bg-dark-background/70">
                 <Button
                   variant={activeTab === 'today' ? 'secondary' : 'ghost'}
                   size="sm"
@@ -112,7 +192,7 @@ const Tasks: React.FC = () => {
                   Todas
                 </Button>
               </div>
-              <div className="inline-flex rounded-lg border border-border/60 bg-white p-1 text-muted-foreground dark:border-dark-border/60 dark:bg-dark-background/70">
+              <div className="inline-flex rounded-md border border-slate-200 bg-white p-1 text-slate-500 shadow-sm dark:border-dark-border/60 dark:bg-dark-background/70">
                 <Button
                   size="sm"
                   variant={view === 'list' ? 'secondary' : 'ghost'}
@@ -142,14 +222,15 @@ const Tasks: React.FC = () => {
             <TaskBoardView sections={sections} onSelect={openForEdit} />
           )}
           {noTasks && (
-            <p className="px-4 py-10 text-center text-xs text-muted-foreground">
+            <p className="px-4 py-10 text-center text-xs text-slate-500 dark:text-dark-muted">
               Nenhuma tarefa para esta combinação de filtros.
             </p>
           )}
         </CardContent>
       </Card>
     </div>
-  );
+  </div>
+);
 };
 
 export default Tasks;

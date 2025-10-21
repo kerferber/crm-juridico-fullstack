@@ -10,5 +10,10 @@ class Level extends Model
     use HasFactory;
 
     public $timestamps = false;
-    protected $fillable = ['id','name','threshold'];
+    protected $fillable = ['id','tenant_id','name','threshold'];
+
+    public function tenant()
+    {
+        return $this->belongsTo(Tenant::class);
+    }
 }

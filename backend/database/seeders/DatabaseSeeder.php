@@ -16,6 +16,7 @@ class DatabaseSeeder extends Seeder
             TaskSeeder::class,
             CalendarEventSeeder::class,
             TransactionSeeder::class,
+            AdminUserSeeder::class,
         ]);
     }
 }

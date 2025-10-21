@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Button } from '../ui/Button';
 import { Loader2, ArrowUpCircle, ArrowDownCircle, X } from 'lucide-react';
 import { useTransactionModal } from '../../hooks/useTransactionModal';
@@ -7,22 +7,32 @@ import { TransactionType } from '../../types/types';
 
 const CreateTransactionModal: React.FC = () => {
   const { isOpen, type, close, open } = useTransactionModal();
-  const { addTransaction } = useApp();
+  const { addTransaction, categoryGroups } = useApp();
 
   const [date, setDate] = useState('');
   const [description, setDescription] = useState('');
-  const [category, setCategory] = useState('');
+  const [categoryId, setCategoryId] = useState<string>('');
+  const [customCategory, setCustomCategory] = useState('');
   const [account, setAccount] = useState('Conta Principal');
   const [value, setValue] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const CUSTOM_CATEGORY_VALUE = '__custom__';
+
+  const financialCategories = useMemo(() => {
+    const financialGroup = categoryGroups.find(group => group.id === 'financial');
+    return financialGroup ? financialGroup.items : [];
+  }, [categoryGroups]);
 
   useEffect(() => {
     if (isOpen) {
       const today = new Date().toISOString().slice(0, 10);
       setDate(today);
       setDescription('');
-      setCategory('');
+      const defaultCategoryId = financialCategories[0]?.id ?? CUSTOM_CATEGORY_VALUE;
+      setCategoryId(defaultCategoryId);
+      setCustomCategory('');
       setAccount('Conta Principal');
       setValue(0);
       setError(null);
@@ -37,7 +47,16 @@ const CreateTransactionModal: React.FC = () => {
       };
     }
     return undefined;
-  }, [isOpen, close]);
+  }, [isOpen, close, financialCategories, CUSTOM_CATEGORY_VALUE]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    if (categoryId === CUSTOM_CATEGORY_VALUE) return;
+    const exists = financialCategories.some(item => item.id === categoryId);
+    if (!exists) {
+      setCategoryId(financialCategories[0]?.id ?? CUSTOM_CATEGORY_VALUE);
+    }
+  }, [financialCategories, categoryId, isOpen, CUSTOM_CATEGORY_VALUE]);
 
   if (!isOpen) return null;
 
@@ -56,16 +75,26 @@ const CreateTransactionModal: React.FC = () => {
       return;
     }
 
+    const selectedCategory = financialCategories.find(item => item.id === categoryId);
+    const usingCustomCategory = !selectedCategory || categoryId === CUSTOM_CATEGORY_VALUE;
+    const resolvedCategory = usingCustomCategory ? customCategory.trim() : selectedCategory?.name;
+
+    if (!resolvedCategory) {
+      setError('Selecione ou informe uma categoria.');
+      return;
+    }
+
     setIsSubmitting(true);
     setError(null);
     try {
       await addTransaction({
         date,
         description: description.trim(),
-        category: category.trim() || (type === TransactionType.Receita ? 'Receitas Diversas' : 'Despesas Gerais'),
+        category: resolvedCategory,
         account: account.trim() || 'Conta Principal',
         value,
         type,
+        categoryId: usingCustomCategory ? undefined : categoryId,
       });
       close();
     } catch (err) {
@@ -122,14 +151,31 @@ const CreateTransactionModal: React.FC = () => {
           <div className="grid gap-4 md:grid-cols-2">
             <label className="flex flex-col gap-1 text-xs font-medium">
               Categoria
-              <input
-                type="text"
-                value={category}
-                onChange={e => setCategory(e.target.value)}
+              <select
+                value={categoryId}
+                onChange={event => setCategoryId(event.target.value)}
                 className="rounded-md border border-border/60 bg-transparent px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-dark-border/60"
-                placeholder="Ex.: Honorários"
-              />
+              >
+                {financialCategories.map(option => (
+                  <option key={option.id} value={option.id}>
+                    {option.name}
+                  </option>
+                ))}
+                <option value={CUSTOM_CATEGORY_VALUE}>Outra categoria…</option>
+              </select>
             </label>
+            {categoryId === CUSTOM_CATEGORY_VALUE && (
+              <label className="flex flex-col gap-1 text-xs font-medium">
+                Categoria personalizada
+                <input
+                  type="text"
+                  value={customCategory}
+                  onChange={event => setCustomCategory(event.target.value)}
+                  className="rounded-md border border-border/60 bg-transparent px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-dark-border/60"
+                  placeholder="Ex.: Reembolso cliente"
+                />
+              </label>
+            )}
             <label className="flex flex-col gap-1 text-xs font-medium">
               Conta
               <input

@@ -7,7 +7,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis
 import { TaskStatus } from '../types/types';
 import dayjs from 'dayjs';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
-import { Award, Trophy, Crown, TrendingUp, TrendingDown, DollarSign, Info } from 'lucide-react';
+import { Award, Trophy, Crown, TrendingUp, TrendingDown, DollarSign, Info, Sparkles } from 'lucide-react';
 
 dayjs.extend(isSameOrBefore);
 
@@ -72,11 +72,15 @@ const Management: React.FC = () => {
         
         // Insights
         const delayInsight = `O tempo médio de atraso neste mês foi de ${averageDelayThisMonth.toFixed(1)} dias.`;
-        const topOverdueUser = users.map(user => ({
+        const topOverdueUser = users
+          .map(user => ({
             name: user.name,
             count: tasks.filter(t => t.responsibleId === user.id && t.status === TaskStatus.Atrasada).length
-        })).sort((a,b) => b.count - a.count)[0];
-        const overdueInsight = `${topOverdueUser.name} é quem possui mais tarefas atrasadas no momento (${topOverdueUser.count}).`;
+          }))
+          .sort((a, b) => b.count - a.count)[0];
+        const overdueInsight = topOverdueUser
+          ? `${topOverdueUser.name} é quem possui mais tarefas atrasadas no momento (${topOverdueUser.count}).`
+          : 'Sem colaboradores com tarefas atrasadas — ótimo desempenho!';
 
         // Remaining calculations...
         const concluidas = tasks.filter(t => t.status === TaskStatus.Concluida);
@@ -163,8 +167,11 @@ const Management: React.FC = () => {
             acc[lawsuit.area] = (acc[lawsuit.area] || 0) + points;
             return acc;
         }, {} as Record<string, number>);
-        const topArea = Object.entries(performanceByArea).sort((a, b) => b[1] - a[1])[0];
-        const areaInsight = `A área de ${topArea[0]} foi a mais produtiva, gerando ${topArea[1].toLocaleString()} pontos.`;
+        const areaEntries = Object.entries(performanceByArea) as Array<[string, number]>;
+        const topArea = areaEntries.length ? [...areaEntries].sort((a, b) => b[1] - a[1])[0] : undefined;
+        const areaInsight = topArea
+          ? `A área de ${topArea[0]} foi a mais produtiva, gerando ${topArea[1].toLocaleString()} pontos.`
+          : 'Ainda não há registros financeiros suficientes para avaliar a performance por área.';
 
         // ...
         const monthlyCashFlow = Array.from({ length: 6 }).map((_, i) => {
@@ -172,7 +179,7 @@ const Management: React.FC = () => {
             const { revenue, expenses, profit } = getFinancialsForMonth(month);
             return { name: month.format('MMM'), Receitas: revenue, Despesas: expenses, Lucro: profit };
         });
-        const performanceByAreaTable = Object.entries(performanceByArea).map(([area, points]) => ({
+        const performanceByAreaTable = areaEntries.map(([area, points]) => ({
              area, 
              lawsuitCount: lawsuits.filter(l => l.area === area).length, 
              concludedTasks: tasks.filter(t => t.status === TaskStatus.Concluida && lawsuits.find(l => l.id === t.lawsuitId)?.area === area).length, 
@@ -193,16 +200,99 @@ const Management: React.FC = () => {
     const COLORS = ['#10B981', '#F59E0B', '#64748B', '#EF4444'];
     const AREA_COLORS = ['#3B82F6', '#10B981', '#8B5CF6'];
 
+    const topPerformer = productivityData.userRanking[0];
+    const summaryCards = [
+        {
+            title: 'Tempo médio de atraso',
+            value: `${agilityData.averageDelay.toFixed(1)} dias`,
+            trend: agilityData.delayChange,
+            detail: 'Comparativo mensal',
+        },
+        {
+            title: 'Top performer',
+            value: topPerformer?.name ?? 'Equipe',
+            detail: topPerformer
+                ? `${topPerformer.points.toLocaleString()} pontos`
+                : 'Acompanhe as entregas do time',
+        },
+        {
+            title: 'Receita do mês',
+            value: formatCurrency(officeData.totalRevenue),
+            trend: officeData.revenueChange,
+            detail: 'Fluxo financeiro atual',
+        },
+        {
+            title: 'Lucro líquido',
+            value: formatCurrency(officeData.netProfit),
+            trend: officeData.profitChange,
+            detail: 'Resultado após despesas',
+        },
+    ];
+
+    const tabOptions: Array<{ key: typeof activeTab; label: string }> = [
+        { key: 'agilidade', label: 'Agilidade operacional' },
+        { key: 'produtividade', label: 'Produtividade' },
+        { key: 'escritorio', label: 'Visão do escritório' },
+    ];
+
     
     return (
-        <div className="space-y-6">
-            <h1 className="text-[22px] font-semibold">Gestão</h1>
-            <div className="border-b border-border dark:border-dark-border">
-                <nav className="-mb-px flex space-x-8">
-                    <button onClick={() => setActiveTab('agilidade')} className={cn('py-4 px-1 border-b-2 font-medium text-sm', activeTab === 'agilidade' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground')}>Agilidade</button>
-                    <button onClick={() => setActiveTab('produtividade')} className={cn('py-4 px-1 border-b-2 font-medium text-sm', activeTab === 'produtividade' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground')}>Produtividade</button>
-                    <button onClick={() => setActiveTab('escritorio')} className={cn('py-4 px-1 border-b-2 font-medium text-sm', activeTab === 'escritorio' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground')}>Visão do Escritório</button>
-                </nav>
+        <div className="space-y-8">
+		<section className="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-[#F3F8FF] via-[#EAF4FF] to-white px-6 py-7 text-slate-800 shadow-[0_28px_70px_-48px_rgba(15,23,42,0.4)]">
+			<div className="absolute -left-28 top-10 h-56 w-56 rounded-full bg-sky-200/70 blur-3xl" />
+			<div className="absolute bottom-[-36px] right-[-40px] h-56 w-56 rounded-full bg-emerald-200/60 blur-3xl" />
+			<div className="relative space-y-6">
+				<div className="max-w-3xl space-y-4">
+					<span className="inline-flex items-center gap-2 rounded-md border border-sky-100 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.32em] text-sky-600 shadow-sm">
+						<Sparkles className="h-3.5 w-3.5 text-sky-500" />
+                            Relatórios premium
+                        </span>
+					<h1 className="text-[26px] font-semibold leading-tight text-slate-900 lg:text-[32px]">
+                            Inteligência operacional do escritório
+                        </h1>
+					<p className="text-[13px] text-slate-500 lg:text-sm">
+                            Visualize indicadores de agilidade, produtividade e resultados financeiros com uma estética sofisticada e orientada a decisões.
+                        </p>
+                    </div>
+				<div className="grid gap-3 text-xs text-slate-600 sm:grid-cols-2 lg:grid-cols-4">
+                        {summaryCards.map(card => (
+					<div
+						key={card.title}
+						className="rounded-xl border border-slate-200 bg-white p-5 shadow-[0_20px_50px_-40px_rgba(15,23,42,0.28)]"
+					>
+						<p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+                                    {card.title}
+                                </p>
+						<p className="mt-2 text-2xl font-semibold text-slate-900">{card.value}</p>
+                                {card.trend !== undefined ? (
+							<p className="mt-1 text-[11px] text-slate-500">
+                                        {card.trend >= 0 ? '+' : ''}
+                                        {card.trend.toFixed(1)}% · {card.detail}
+                                    </p>
+                                ) : (
+							<p className="mt-1 text-[11px] text-slate-500">{card.detail}</p>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </section>
+
+		<div className="flex flex-wrap items-center gap-3">
+                {tabOptions.map(tab => (
+                    <button
+                        key={tab.key}
+                        onClick={() => setActiveTab(tab.key)}
+					className={cn(
+						'rounded-md border px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.22em] transition',
+						activeTab === tab.key
+							? 'border-sky-500 bg-sky-500 text-white shadow-sm'
+							: 'border-slate-200 bg-white text-slate-500 hover:border-sky-300 hover:text-sky-600'
+					)}
+                    >
+                        {tab.label}
+                    </button>
+                ))}
             </div>
             
             {activeTab === 'agilidade' && (

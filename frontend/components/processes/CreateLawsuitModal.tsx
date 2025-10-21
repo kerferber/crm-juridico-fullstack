@@ -4,16 +4,18 @@ import { useApp } from '../../store/AppContext';
 import { Button } from '../ui/Button';
 import { Loader2, X, Briefcase } from 'lucide-react';
 import ContactSearchInput from '../contacts/ContactSearchInput';
+import MentionTextarea from '../inputs/MentionTextarea';
+import { MentionReference } from '../../types/types';
 
-const AREA_OPTIONS: Array<'Cível' | 'Trabalhista' | 'Previdenciário'> = ['Cível', 'Trabalhista', 'Previdenciário'];
 const STATUS_OPTIONS: Array<'Ativo' | 'Fechado' | 'Arquivado'> = ['Ativo', 'Fechado', 'Arquivado'];
+const FALLBACK_AREAS = ['Cível', 'Trabalhista', 'Previdenciário'];
 
 const CreateLawsuitModal: React.FC = () => {
   const { isOpen, close, defaults } = useProcessModal();
-  const { contacts, users, addLawsuit } = useApp();
+  const { contacts, users, addLawsuit, categoryGroups } = useApp();
 
   const [internalNumber, setInternalNumber] = useState('');
-  const [area, setArea] = useState<'Cível' | 'Trabalhista' | 'Previdenciário'>('Cível');
+  const [area, setArea] = useState<string>('Cível');
   const [phase, setPhase] = useState('Inicial');
   const [deadline, setDeadline] = useState('');
   const [status, setStatus] = useState<'Ativo' | 'Fechado' | 'Arquivado'>('Ativo');
@@ -21,6 +23,8 @@ const CreateLawsuitModal: React.FC = () => {
   const [responsibleId, setResponsibleId] = useState<number | ''>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notes, setNotes] = useState('');
+  const [mentions, setMentions] = useState<MentionReference[]>([]);
 
   const defaultClientId = useMemo(
     () => defaults?.clientId ?? contacts[0]?.id ?? '',
@@ -31,16 +35,26 @@ const CreateLawsuitModal: React.FC = () => {
     [users, defaults]
   );
 
+  const areaOptions = useMemo(() => {
+    const group = categoryGroups.find(categoryGroup => categoryGroup.id === 'lawsuits');
+    if (group && group.items.length > 0) {
+      return group.items.map(item => item.name);
+    }
+    return FALLBACK_AREAS;
+  }, [categoryGroups]);
+
   useEffect(() => {
     if (isOpen) {
       setInternalNumber('');
-      setArea('Cível');
+      setArea(defaults?.area ?? areaOptions[0] ?? 'Cível');
       setPhase('Inicial');
       setDeadline('');
       setStatus('Ativo');
       setClientId(defaultClientId);
       setResponsibleId(defaultResponsibleId);
       setError(null);
+      setNotes('');
+      setMentions([]);
       document.body.classList.add('overflow-hidden');
       const handleEsc = (event: KeyboardEvent) => {
         if (event.key === 'Escape') close();
@@ -52,7 +66,14 @@ const CreateLawsuitModal: React.FC = () => {
       };
     }
     return undefined;
-  }, [isOpen, close, defaultClientId, defaultResponsibleId]);
+  }, [isOpen, close, defaultClientId, defaultResponsibleId, defaults, areaOptions]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    if (!areaOptions.includes(area)) {
+      setArea(areaOptions[0] ?? 'Cível');
+    }
+  }, [areaOptions, area, isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -112,6 +133,8 @@ const CreateLawsuitModal: React.FC = () => {
         responsibleId: Number(responsibleId),
         kanbanColumn: 'Backlog',
         kanbanPhase: 'Judicial',
+        notes: notes.trim() || undefined,
+        mentions,
       });
       close();
     } catch (err) {
@@ -159,10 +182,10 @@ const CreateLawsuitModal: React.FC = () => {
               Área
               <select
                 value={area}
-                onChange={e => setArea(e.target.value as typeof area)}
+                onChange={e => setArea(e.target.value)}
                 className="rounded-md border border-border/60 bg-transparent px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-dark-border/60"
               >
-                {AREA_OPTIONS.map(option => (
+                {areaOptions.map(option => (
                   <option key={option} value={option}>{option}</option>
                 ))}
               </select>
@@ -222,6 +245,18 @@ const CreateLawsuitModal: React.FC = () => {
               </select>
             </label>
           </div>
+
+          <MentionTextarea
+            label="Notas internas"
+            description="Utilize @ para mencionar colegas e # para vincular contatos relevantes."
+            placeholder="Ex.: Validar estratégia com @Sofia e solicitar documentos para #Empresa Alpha"
+            value={notes}
+            onChange={setNotes}
+            onMentionsChange={setMentions}
+            users={users}
+            contacts={contacts}
+            initialMentions={mentions}
+          />
 
           <div className="flex flex-col-reverse gap-3 border-t border-border/60 pt-4 dark:border-dark-border/60 sm:flex-row sm:items-center sm:justify-between">
             <Button variant="ghost" type="button" onClick={handleClose} disabled={isSubmitting}>Cancelar</Button>

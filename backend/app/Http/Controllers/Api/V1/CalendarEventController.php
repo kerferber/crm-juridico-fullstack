@@ -23,29 +23,79 @@ class CalendarEventController extends Controller
         return null;
     }
 
-    public function index(Request $r) {
-        $user = $this->resolveUser($r);
-        $query = CalendarEvent::query()->orderBy('start','asc');
+    public function index(Request $request)
+    {
+        $tenantId = $this->ensureTenantId($request);
+        $user = $this->resolveUser($request);
+
+        $query = CalendarEvent::query()
+            ->where('tenant_id', $tenantId)
+            ->orderBy('start', 'asc');
 
         if ($user) {
-            $query->where('user_id', $user->id);
+            $query->where(function ($qb) use ($user) {
+                $qb->whereNull('user_id')
+                    ->orWhere('user_id', $user->id);
+            });
         }
 
         return $query->paginate(50);
     }
 
-    public function store(Request $r) {
-        $user = $this->resolveUser($r);
+    public function store(Request $request)
+    {
+        $tenantId = $this->ensureTenantId($request);
+        $user = $this->resolveUser($request);
+
         if (!$user) {
             abort(401, 'Unauthorized');
         }
 
-        $data = $r->all();
+        $data = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'start' => ['required', 'date'],
+            'end' => ['nullable', 'date'],
+            'color' => ['nullable', 'string', 'max:32'],
+        ]);
+
+        $data['tenant_id'] = $tenantId;
         $data['user_id'] = $user->id;
 
-        return CalendarEvent::create($data);
+        $event = CalendarEvent::create($data);
+
+        return response()->json($event, 201);
     }
-    public function show($id) { return CalendarEvent::findOrFail($id); }
-    public function update(Request $r, $id) { $m = CalendarEvent::findOrFail($id); $m->update($r->all()); return $m; }
-    public function destroy($id) { CalendarEvent::findOrFail($id)->delete(); return response()->noContent(); }
+
+    public function show(Request $request, $id)
+    {
+        $tenantId = $this->ensureTenantId($request);
+
+        return CalendarEvent::where('tenant_id', $tenantId)->findOrFail($id);
+    }
+
+    public function update(Request $request, $id)
+    {
+        $tenantId = $this->ensureTenantId($request);
+        $event = CalendarEvent::where('tenant_id', $tenantId)->findOrFail($id);
+
+        $data = $request->validate([
+            'title' => ['sometimes', 'required', 'string', 'max:255'],
+            'start' => ['sometimes', 'required', 'date'],
+            'end' => ['nullable', 'date'],
+            'color' => ['nullable', 'string', 'max:32'],
+        ]);
+
+        $event->update($data);
+
+        return $event;
+    }
+
+    public function destroy(Request $request, $id)
+    {
+        $tenantId = $this->ensureTenantId($request);
+        $event = CalendarEvent::where('tenant_id', $tenantId)->findOrFail($id);
+        $event->delete();
+
+        return response()->noContent();
+    }
 }

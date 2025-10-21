@@ -17,30 +17,21 @@ body {
   min-height: 100vh;
   margin: 0;
   font-family: 'Inter', 'General Sans', 'Segoe UI', system-ui, -apple-system, sans-serif;
-  font-size: 14px;
-  background: linear-gradient(180deg, #F6F7FF 0%, #EEF1F9 100%);
-  color: #121425;
+  font-size: 13px;
+  line-height: 1.45;
+  background-color: #F4F5FA;
+  color: #131728;
   position: relative;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .dark body {
   color-scheme: dark;
-  background: radial-gradient(circle at 20% 20%, rgba(124,123,255,0.12), transparent 55%), #060913;
-  color: #E5EBFF;
+  background-color: #060A1A;
+  color: #E5E9FF;
 }
-
-.space-y-5 > :not([hidden]) ~ :not([hidden]) { margin-top: 1.25rem !important; }
-.space-y-6 > :not([hidden]) ~ :not([hidden]) { margin-top: 1.35rem !important; }
-.space-y-8 > :not([hidden]) ~ :not([hidden]) { margin-top: 1.6rem !important; }
-.space-y-10 > :not([hidden]) ~ :not([hidden]) { margin-top: 1.9rem !important; }
-
-.rounded-\[32px\] { border-radius: 12px !important; }
-.rounded-3xl { border-radius: 0.75rem !important; }
-.rounded-2xl { border-radius: 0.55rem !important; }
-.rounded-xl { border-radius: 0.45rem !important; }
-.rounded-lg { border-radius: 0.35rem !important; }
 
 ::-webkit-scrollbar {
   width: 10px;
@@ -51,13 +42,13 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: rgba(103, 114, 146, 0.45);
+  background-color: rgba(101, 112, 149, 0.4);
   border-radius: 999px;
   border: 2px solid transparent;
 }
 
 .dark ::-webkit-scrollbar-thumb {
-  background-color: rgba(120, 130, 160, 0.28);
+  background-color: rgba(124, 136, 178, 0.32);
 }
 
 table thead tr {
@@ -75,4 +66,28 @@ table tbody tr:hover {
 
 .dark table tbody tr:hover {
   background-color: rgba(99, 102, 241, 0.12);
+}
+
+@layer base {
+  .rounded-sm {
+    border-radius: 2px !important;
+  }
+  .rounded {
+    border-radius: 3px !important;
+  }
+  .rounded-md {
+    border-radius: 4px !important;
+  }
+  .rounded-lg {
+    border-radius: 6px !important;
+  }
+  .rounded-xl {
+    border-radius: 8px !important;
+  }
+  .rounded-2xl {
+    border-radius: 10px !important;
+  }
+  .rounded-3xl {
+    border-radius: 12px !important;
+  }
 }

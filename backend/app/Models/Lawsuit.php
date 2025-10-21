@@ -10,8 +10,16 @@ class Lawsuit extends Model
     use HasFactory;
 
     protected $fillable = [
-        'internal_number','area','phase','deadline','status',
-        'client_id','responsible_id','kanban_column','kanban_phase'
+        'tenant_id',
+        'internal_number',
+        'area',
+        'phase',
+        'deadline',
+        'status',
+        'client_id',
+        'responsible_id',
+        'kanban_column',
+        'kanban_phase',
     ];
 
     protected $casts = [
@@ -31,5 +39,10 @@ class Lawsuit extends Model
     public function tasks()
     {
         return $this->hasMany(Task::class);
+    }
+
+    public function tenant()
+    {
+        return $this->belongsTo(Tenant::class);
     }
 }

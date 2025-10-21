@@ -3,6 +3,7 @@ import React, { createContext, useCallback, useContext, useMemo, useState } from
 export interface ProcessModalDefaults {
   clientId?: number;
   responsibleId?: number;
+  area?: string;
 }
 
 interface ProcessModalContextValue {
