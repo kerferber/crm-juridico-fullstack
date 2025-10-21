@@ -204,140 +204,152 @@ const Lawsuits: React.FC = () => {
           </select>
         </div>
 
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="mt-8 overflow-hidden rounded-2xl border border-border/60 bg-white dark:border-dark-border/60 dark:bg-dark-card/80">
+          <div className="hidden grid-cols-[minmax(220px,1fr),minmax(180px,0.8fr),minmax(160px,0.7fr),minmax(200px,0.8fr),120px] border-b border-border/60 bg-muted/30 px-6 py-3 text-[11px] font-semibold uppercase tracking-[0.3em] text-muted-foreground dark:border-dark-border/60 dark:bg-dark-card/70 md:grid">
+            <span>Processo</span>
+            <span>Cliente & Área</span>
+            <span>Responsável</span>
+            <span>Prazos & Tarefas</span>
+            <span className="text-right">Ações</span>
+          </div>
+
           {filteredLawsuits.map(lawsuit => {
             const client = contacts.find(contact => contact.id === lawsuit.clientId);
             const responsible = users.find(user => user.id === lawsuit.responsibleId);
             const relatedTasks = tasks.filter(task => task.lawsuitId === lawsuit.id);
-            const dueBadge =
+            const overdueTasks = relatedTasks.filter(task => task.status === 'Atrasada').length;
+            const isDeadlineLate =
               lawsuit.deadline &&
-              dayjs().isAfter(dayjs(lawsuit.deadline), 'day') &&
-              lawsuit.status === 'Ativo'
-                ? 'bg-rose-500/10 text-rose-600 dark:text-rose-200'
-                : 'bg-primary/10 text-primary dark:bg-dark-primary/15 dark:text-dark-primary';
+              lawsuit.status === 'Ativo' &&
+              dayjs().isAfter(dayjs(lawsuit.deadline), 'day');
 
             return (
-              <Card
+              <div
                 key={lawsuit.id}
-                className="group relative overflow-hidden border border-border/60 bg-white/90 p-1 shadow-[0_18px_45px_-30px_rgba(12,10,29,0.45)] transition hover:-translate-y-1 hover:border-primary/40 hover:shadow-[0_30px_80px_-50px_rgba(79,70,229,0.55)] dark:border-dark-border/60 dark:bg-dark-card/85 dark:hover:border-dark-primary/40"
+                className="flex flex-col gap-4 border-b border-border/60 px-4 py-5 transition hover:bg-muted/30 dark:border-dark-border/60 dark:hover:bg-dark-card/60 md:grid md:grid-cols-[minmax(220px,1fr),minmax(180px,0.8fr),minmax(160px,0.7fr),minmax(200px,0.8fr),120px] md:items-center md:px-6"
               >
-                <span className="absolute inset-x-0 top-0 block h-1 bg-gradient-to-r from-primary/60 via-primary to-primary/60 opacity-0 transition group-hover:opacity-100 dark:from-dark-primary/70 dark:via-dark-primary dark:to-dark-primary/70" />
-                <CardHeader className="pb-0">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <Link
-                        to={`/processos/${lawsuit.id}`}
-                        className="text-base font-semibold text-foreground transition hover:text-primary dark:text-dark-foreground dark:hover:text-dark-primary"
-                      >
-                        {lawsuit.internalNumber}
-                      </Link>
-                      <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                        <span
-                          className={cn(
-                            'inline-flex items-center rounded-full px-2 py-0.5',
-                            STATUS_COLORS[lawsuit.status] ??
-                              'bg-slate-100 text-slate-700 dark:bg-slate-500/10 dark:text-slate-200'
-                          )}
-                        >
-                          {lawsuit.status}
-                        </span>
-                        <span
-                          className={cn(
-                            'inline-flex items-center rounded-full px-2 py-0.5',
-                            AREA_COLORS[lawsuit.area] ??
-                              'bg-primary/10 text-primary dark:bg-dark-primary/15 dark:text-dark-primary'
-                          )}
-                        >
-                          {lawsuit.area}
-                        </span>
-                      </div>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-8 rounded-lg border-primary/40 px-3 text-xs font-semibold text-primary hover:bg-primary/10 dark:border-dark-primary/40 dark:text-dark-primary dark:hover:bg-dark-primary/15"
-                      asChild
+                <div>
+                  <Link
+                    to={`/processos/${lawsuit.id}`}
+                    className="text-sm font-semibold text-foreground transition hover:text-primary dark:text-dark-foreground dark:hover:text-dark-primary"
+                  >
+                    {lawsuit.internalNumber}
+                  </Link>
+                  <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
+                    <span
+                      className={cn(
+                        'inline-flex items-center rounded-full border px-2 py-0.5',
+                        STATUS_COLORS[lawsuit.status] ??
+                          'border-slate-200 bg-slate-100 text-slate-700 dark:border-slate-500/20 dark:bg-slate-500/10 dark:text-slate-200'
+                      )}
                     >
-                      <Link to={`/processos/${lawsuit.id}`}>Detalhes</Link>
-                    </Button>
-                  </div>
-                </CardHeader>
-
-                <CardContent className="space-y-4 pt-4 text-sm">
-                  <div className="grid gap-3 text-xs text-muted-foreground">
-                    <div className="flex items-center gap-2">
-                      <User className="h-3.5 w-3.5 text-primary" />
-                      <span className="font-medium text-foreground dark:text-dark-foreground">
-                        {client?.name ?? 'Cliente não informado'}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <ClipboardList className="h-3.5 w-3.5 text-primary" />
-                      <span>
-                        {responsible
-                          ? `Responsável: ${responsible.name}`
-                          : 'Responsável não atribuído'}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <CalendarDays className="h-3.5 w-3.5 text-primary" />
-                      <span
-                        className={cn(
-                          'rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.32em]',
-                          dueBadge
-                        )}
-                      >
-                        {lawsuit.deadline ? `Prazo ${formatDate(lawsuit.deadline)}` : 'Prazo não definido'}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-                    <span>
-                      {relatedTasks.length} tarefas vinculadas ·{' '}
-                      {relatedTasks.some(task => task.status === 'Atrasada')
-                        ? 'atenção aos atrasos'
-                        : 'em dia'}
+                      {lawsuit.status}
                     </span>
-                    <div className="flex items-center gap-1.5">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 rounded-lg border border-border/60 text-primary hover:border-primary/40 hover:bg-primary/10 dark:border-dark-border/60 dark:text-dark-primary dark:hover:border-dark-primary/40 dark:hover:bg-dark-primary/10"
-                        title="Criar tarefa ligada ao processo"
-                        onClick={() =>
-                          openTaskModal({
-                            lawsuitId: lawsuit.id,
-                            clientId: lawsuit.clientId,
-                            responsibleId: lawsuit.responsibleId,
-                          })
-                        }
-                      >
-                        <ClipboardList className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 rounded-lg border border-border/60 text-primary hover:border-primary/40 hover:bg-primary/10 dark:border-dark-border/60 dark:text-dark-primary dark:hover:border-dark-primary/40 dark:hover:bg-dark-primary/10"
-                        title="Novo processo vinculado"
-                        onClick={() =>
-                          openProcessModal({
-                            clientId: lawsuit.clientId,
-                            responsibleId: lawsuit.responsibleId,
-                          })
-                        }
-                      >
-                        <Briefcase className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    <span
+                      className={cn(
+                        'inline-flex items-center rounded-full border px-2 py-0.5',
+                        AREA_COLORS[lawsuit.area] ??
+                          'border-primary/20 bg-primary/10 text-primary dark:border-dark-primary/20 dark:bg-dark-primary/15 dark:text-dark-primary'
+                      )}
+                    >
+                      {lawsuit.area}
+                    </span>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+
+                <div className="text-sm text-muted-foreground dark:text-dark-muted">
+                  <div className="flex items-center gap-2">
+                    <User className="h-3.5 w-3.5 text-primary dark:text-dark-primary" />
+                    <span className="font-medium text-foreground dark:text-dark-foreground">
+                      {client?.name ?? 'Cliente não informado'}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-[12px]">Fase: {lawsuit.phase || 'Não informada'}</p>
+                </div>
+
+                <div className="text-sm text-muted-foreground dark:text-dark-muted">
+                  <div className="flex items-center gap-2">
+                    <ClipboardList className="h-3.5 w-3.5 text-primary dark:text-dark-primary" />
+                    <span>{responsible ? responsible.name : 'Responsável não atribuído'}</span>
+                  </div>
+                  {lawsuit.clientId && (
+                    <p className="mt-1 text-[12px]">
+                      Vínculo:&nbsp;
+                      <Link
+                        to={`/contatos/${lawsuit.clientId}`}
+                        className="font-medium text-primary hover:underline dark:text-dark-primary"
+                      >
+                        Ver contato
+                      </Link>
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-1 text-sm text-muted-foreground dark:text-dark-muted">
+                  <div className="flex items-center gap-2">
+                    <CalendarDays className="h-3.5 w-3.5 text-primary dark:text-dark-primary" />
+                    <span
+                      className={cn(
+                        'rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.28em]',
+                        isDeadlineLate
+                          ? 'bg-rose-50 text-rose-600 dark:bg-rose-500/15 dark:text-rose-200'
+                          : 'bg-primary/10 text-primary dark:bg-dark-primary/15 dark:text-dark-primary'
+                      )}
+                    >
+                      {lawsuit.deadline ? `Prazo ${formatDate(lawsuit.deadline)}` : 'Sem prazo definido'}
+                    </span>
+                  </div>
+                  <p className="text-[12px]">
+                    {relatedTasks.length} tarefas ·{' '}
+                    {overdueTasks > 0 ? `${overdueTasks} atrasada(s)` : 'em dia'}
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 rounded-lg border-primary/40 px-3 text-xs font-semibold text-primary hover:bg-primary/10 dark:border-dark-primary/40 dark:text-dark-primary dark:hover:bg-dark-primary/15"
+                    asChild
+                  >
+                    <Link to={`/processos/${lawsuit.id}`}>Detalhes</Link>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 rounded-lg border border-border/60 text-primary hover:border-primary/40 hover:bg-primary/10 dark:border-dark-border/60 dark:text-dark-primary dark:hover:border-dark-primary/40 dark:hover:bg-dark-primary/10"
+                    title="Criar tarefa ligada ao processo"
+                    onClick={() =>
+                      openTaskModal({
+                        lawsuitId: lawsuit.id,
+                        clientId: lawsuit.clientId,
+                        responsibleId: lawsuit.responsibleId,
+                      })
+                    }
+                  >
+                    <ClipboardList className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 rounded-lg border border-border/60 text-primary hover:border-primary/40 hover:bg-primary/10 dark:border-dark-border/60 dark:text-dark-primary dark:hover:border-dark-primary/40 dark:hover:bg-dark-primary/10"
+                    title="Novo processo vinculado"
+                    onClick={() =>
+                      openProcessModal({
+                        clientId: lawsuit.clientId,
+                        responsibleId: lawsuit.responsibleId,
+                      })
+                    }
+                  >
+                    <Briefcase className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
             );
           })}
 
           {filteredLawsuits.length === 0 && (
-            <div className="col-span-full flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border/60 bg-muted/20 px-6 py-16 text-center text-sm text-muted-foreground dark:border-dark-border/60 dark:bg-dark-card/60">
+            <div className="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center text-sm text-muted-foreground dark:text-dark-muted">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary dark:bg-dark-primary/10 dark:text-dark-primary">
                 <Briefcase className="h-6 w-6" />
               </div>

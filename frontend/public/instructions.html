@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <title>Guia detalhado de deploy – CRM Jurídico</title>
+    <style>
+      body {
+        font-family: "Segoe UI", Roboto, sans-serif;
+        background: #f4f6fb;
+        color: #1f2933;
+        line-height: 1.7;
+        margin: 0;
+        padding: 32px;
+      }
+      main {
+        max-width: 1080px;
+        margin: 0 auto;
+        background: #ffffff;
+        border-radius: 18px;
+        box-shadow: 0 25px 60px -30px rgba(15, 23, 42, 0.3);
+        padding: 48px;
+      }
+      h1, h2, h3 {
+        color: #111827;
+        line-height: 1.25;
+      }
+      h1 { font-size: 2.6rem; margin-bottom: 12px; }
+      h2 { margin-top: 38px; font-size: 1.7rem; }
+      h3 { margin-top: 22px; font-size: 1.25rem; }
+      p { margin: 12px 0; }
+      code {
+        background: #0f172a;
+        color: #e2e8ff;
+        padding: 2px 6px;
+        border-radius: 6px;
+        font-family: "Fira Code", monospace;
+      }
+      pre {
+        background: #0f172a;
+        color: #e2e8ff;
+        padding: 18px;
+        border-radius: 14px;
+        overflow-x: auto;
+        white-space: pre-wrap;
+      }
+      ol, ul { padding-left: 24px; margin: 16px 0; }
+      .card {
+        border: 1px solid rgba(148, 163, 184, 0.35);
+        background: #f8fafc;
+        border-radius: 16px;
+        padding: 18px 22px;
+      }
+      .note {
+        border-left: 6px solid #2563eb;
+        background: #eef4ff;
+        border-radius: 16px;
+        padding: 18px;
+        margin: 24px 0;
+        color: #1d4ed8;
+      }
+      footer {
+        margin-top: 48px;
+        font-size: 0.85rem;
+        color: #6b7280;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Publicar o CRM Jurídico em uma VPS (guia completo)</h1>
+      <p>
+        Este documento assume uma VPS recém-criada com <strong>Ubuntu Server 22.04</strong> e domínio
+        <strong>fernandokerber.com</strong>. O objetivo é colocar online o backend Laravel (API) e o frontend React (Vite), protegidos
+        por Traefik (reverse proxy + HTTPS) e com rotinas de cron/queues configuradas.
+      </p>
+
+      <h2>1. Preparativos e pré-requisitos</h2>
+      <div class="card">
+        <ul>
+          <li>VPS ativa e acesso via SSH (<code>ssh usuario@IP_DA_VPS</code>).</li>
+          <li>Usuário com permissão <code>sudo</code> e chaves SSH configuradas (evite senha).</li>
+          <li>Domínio <strong>fernandokerber.com</strong> com acesso ao painel DNS.</li>
+          <li>Hostname da VPS: <code>sudo hostnamectl set-hostname vps-crm</code>.</li>
+          <li>Planejamento de subdomínios:
+            <ul>
+              <li><code>app.fernandokerber.com</code> &rarr; aplicação React.</li>
+              <li><code>api.fernandokerber.com</code> &rarr; API Laravel.</li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+
+      <h2>2. Conectar e preparar o ambiente</h2>
+      <ol>
+        <li>Acesse a VPS: <code>ssh usuario@IP</code>.</li>
+        <li>Atualize pacotes:
+<pre>sudo apt update && sudo apt upgrade -y</pre>
+        </li>
+        <li>Instale utilitários básicos:
+<pre>sudo apt install -y build-essential curl wget git ufw unzip htop</pre>
+        </li>
+        <li>Configure o firewall UFW (liberando apenas SSH/HTTP/HTTPS):
+<pre>sudo ufw default deny incoming
+sudo ufw default allow outgoing
+sudo ufw allow OpenSSH
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+sudo ufw enable
+sudo ufw status verbose</pre>
+        </li>
+      </ol>
+
+      <h2>3. Dependências obrigatórias</h2>
+      <h3>PHP 8.2 + Composer</h3>
+<pre>sudo add-apt-repository ppa:ondrej/php -y
+sudo apt update
+sudo apt install -y php8.2 php8.2-fpm php8.2-cli php8.2-common \
+  php8.2-mbstring php8.2-xml php8.2-curl php8.2-zip php8.2-mysql \
+  php8.2-bcmath php8.2-gd
+curl -sS https://getcomposer.org/installer -o composer-setup.php
+sudo php composer-setup.php --install-dir=/usr/local/bin --filename=composer</pre>
+
+      <h3>Node.js 20 + npm</h3>
+<pre>curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt install -y nodejs
+node -v && npm -v</pre>
+
+      <h3>MySQL/MariaDB</h3>
+<pre>sudo apt install -y mysql-server
+sudo mysql_secure_installation
+sudo mysql -e "CREATE DATABASE crmjuridico CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+sudo mysql -e "CREATE USER 'crm_user'@'localhost' IDENTIFIED BY 'senha-segura';"
+sudo mysql -e "GRANT ALL PRIVILEGES ON crmjuridico.* TO 'crm_user'@'localhost';"</pre>
+
+      <h2>4. Diretórios e clone do repositório</h2>
+<pre>sudo mkdir -p /var/www
+cd /var/www
+sudo git clone https://github.com/seu-usuario/seu-repo.git crm-juridico
+sudo chown -R $USER:$USER crm-juridico</pre>
+      <p>Estrutura esperada:</p>
+<pre>/var/www/crm-juridico
+└── dev/crm
+    ├── backend  (Laravel)
+    └── frontend (React + Vite)</pre>
+
+      <h2>5. Preparar o backend Laravel</h2>
+      <ol>
+        <li>Instalar dependências:
+<pre>cd /var/www/crm-juridico/dev/crm/backend
+composer install --optimize-autoloader --no-dev
+cp .env.example .env</pre>
+        </li>
+        <li>Editar <code>.env</code> (trecho principal):
+<pre>APP_NAME="CRM Juridico"
+APP_ENV=production
+APP_KEY=
+APP_URL=https://api.fernandokerber.com
+
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=crmjuridico
+DB_USERNAME=crm_user
+DB_PASSWORD=senha-segura
+
+QUEUE_CONNECTION=database
+SESSION_DRIVER=file
+CACHE_DRIVER=file</pre>
+        </li>
+        <li>Aplicar migrações/seed e ajustar permissões:
+<pre>php artisan key:generate
+php artisan migrate --force
+php artisan db:seed --force   # opcional
+sudo chown -R www-data:www-data storage bootstrap/cache
+sudo chmod -R 775 storage bootstrap/cache</pre>
+        </li>
+      </ol>
+
+      <h2>6. Build do frontend React</h2>
+      <ol>
+        <li>Instalar dependências e configurar API:
+<pre>cd /var/www/crm-juridico/dev/crm/frontend
+npm install
+cat <<'ENV' > .env.production
+VITE_API_BASE_URL=https://api.fernandokerber.com
+ENV</pre>
+        </li>
+        <li>Gerar build e copiar para local público:
+<pre>npm run build
+sudo mkdir -p /var/www/crm-frontend
+sudo cp -r dist/* /var/www/crm-frontend/
+sudo chown -R www-data:www-data /var/www/crm-frontend</pre>
+        </li>
+      </ol>
+
+      <h2>7. Configurar Nginx em portas internas</h2>
+      <p>O Nginx responderá internamente em 8081 (API) e 8082 (App). Traefik fará o proxy público.</p>
+
+      <h3>API Laravel &rarr; <code>/etc/nginx/sites-available/api-crm</code></h3>
+<pre>sudo tee /etc/nginx/sites-available/api-crm <<'CONF'
+server {
+    listen 8081;
+    server_name api.internal;
+    root /var/www/crm-juridico/dev/crm/backend/public;
+    index index.php index.html;
+
+    add_header X-Frame-Options "SAMEORIGIN";
+    add_header X-Content-Type-Options "nosniff";
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+    location ~ \.php$ {
+        include snippets/fastcgi-php.conf;
+        fastcgi_pass unix:/run/php/php8.2-fpm.sock;
+    }
+    location ~ /\.ht {
+        deny all;
+    }
+}
+CONF
+sudo ln -s /etc/nginx/sites-available/api-crm /etc/nginx/sites-enabled/api-crm</pre>
+
+      <h3>Frontend estático &rarr; <code>/etc/nginx/sites-available/app-crm</code></h3>
+<pre>sudo tee /etc/nginx/sites-available/app-crm <<'CONF'
+server {
+    listen 8082;
+    server_name app.internal;
+    root /var/www/crm-frontend;
+    index index.html;
+
+    location / {
+        try_files $uri /index.html;
+    }
+}
+CONF
+sudo ln -s /etc/nginx/sites-available/app-crm /etc/nginx/sites-enabled/app-crm</pre>
+
+      <p>Valide e recarregue:</p>
+<pre>sudo nginx -t
+sudo systemctl reload nginx</pre>
+
+      <h2>8. Instalar Traefik (reverse proxy)</h2>
+      <p>Traefik ficará na porta 80/443, cuidará dos certificados e encaminhará para 8081/8082.</p>
+
+      <h3>Download e estrutura</h3>
+<pre>cd ~
+wget https://github.com/traefik/traefik/releases/download/v2.10.6/traefik_v2.10.6_linux_amd64.tar.gz
+sudo tar -xzf traefik_v2.10.6_linux_amd64.tar.gz -C /usr/local/bin traefik
+sudo mkdir -p /etc/traefik/dynamic
+sudo touch /etc/traefik/acme.json
+sudo chmod 600 /etc/traefik/acme.json</pre>
+
+      <h3>Configuração estática &rarr; <code>/etc/traefik/traefik.yml</code></h3>
+<pre>sudo tee /etc/traefik/traefik.yml <<'CONF'
+entryPoints:
+  web:
+    address: ":80"
+  websecure:
+    address: ":443"
+
+providers:
+  file:
+    directory: /etc/traefik/dynamic
+    watch: true
+
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      email: contato@fernandokerber.com
+      storage: /etc/traefik/acme.json
+      httpChallenge:
+        entryPoint: web
+
+log:
+  level: INFO
+accessLog: {}
+CONF</pre>
+
+      <h3>Configuração dinâmica &rarr; <code>/etc/traefik/dynamic/routes.yml</code></h3>
+<pre>sudo tee /etc/traefik/dynamic/routes.yml <<'CONF'
+http:
+  routers:
+    api-router:
+      rule: "Host(`api.fernandokerber.com`)"
+      entryPoints: ["websecure"]
+      service: api-service
+      tls:
+        certResolver: letsencrypt
+    app-router:
+      rule: "Host(`fernandokerber.com`, `www.fernandokerber.com`)"
+      entryPoints: ["websecure"]
+      service: app-service
+      tls:
+        certResolver: letsencrypt
+  middlewares:
+    https-redirect:
+      redirectScheme:
+        scheme: https
+        permanent: true
+  services:
+    api-service:
+      loadBalancer:
+        servers:
+          - url: "http://127.0.0.1:8081"
+    app-service:
+      loadBalancer:
+        servers:
+          - url: "http://127.0.0.1:8082"
+CONF</pre>
+
+      <h3>Serviço systemd</h3>
+<pre>sudo tee /etc/systemd/system/traefik.service <<'CONF'
+[Unit]
+Description=Traefik Reverse Proxy
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/traefik --configFile=/etc/traefik/traefik.yml
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+CONF
+
+sudo systemctl daemon-reload
+sudo systemctl enable traefik
+sudo systemctl start traefik
+sudo systemctl status traefik --no-pager</pre>
+
+      <h3>DNS</h3>
+      <p>Crie registros A para <code>app.fernandokerber.com</code> e <code>api.fernandokerber.com</code> apontando para o IP da VPS. Aguarde propagação antes de testar HTTPS.</p>
+
+      <h2>9. Rotinas em background</h2>
+      <h3>Scheduler</h3>
+      <p>Execute <code>crontab -e</code> e adicione:</p>
+<pre>* * * * * cd /var/www/crm-juridico/dev/crm/backend && php artisan schedule:run >> /dev/null 2>&1</pre>
+
+      <h3>Filas (Supervisor)</h3>
+<pre>sudo apt install -y supervisor
+sudo tee /etc/supervisor/conf.d/crm-queue.conf <<'CONF'
+[program:crm-queue]
+process_name=%(program_name)s_%(process_num)02d
+command=php /var/www/crm-juridico/dev/crm/backend/artisan queue:work --sleep=3 --tries=3 --max-time=3600
+autostart=true
+autorestart=true
+user=www-data
+numprocs=1
+redirect_stderr=true
+stdout_logfile=/var/www/crm-juridico/dev/crm/backend/storage/logs/queue.log
+CONF
+sudo supervisorctl reread
+sudo supervisorctl update
+sudo supervisorctl start crm-queue:*</pre>
+
+      <h2>10. Checklist final</h2>
+      <ul>
+        <li>UFW habilitado (verifique <code>sudo ufw status</code>).</li>
+        <li>Nginx respondendo localmente (<code>curl http://127.0.0.1:8081</code> e <code>curl http://127.0.0.1:8082</code>).</li>
+        <li>Traefik ativo (<code>systemctl status traefik</code>) e certificados emitidos (<code>/etc/traefik/acme.json</code>).</li>
+        <li>DNS propagado para os subdomínios.</li>
+        <li>Jobs do cron e queue rodando (ver <code>sudo supervisorctl status</code>).</li>
+        <li>Backup do banco configurado (ex.: rotina diária com <code>mysqldump</code>).</li>
+      </ul>
+
+      <div class="note">
+        <strong>Primeiro acesso:</strong> depois de subir a aplicação, entre em <code>https://app.fernandokerber.com</code> e faça login com
+        uma conta administrativa. Caso não tenha, crie via seeder ou rota de cadastro do painel admin (<code>/admin/login</code> &rarr; criar tenant &rarr; gerar credenciais).
+      </div>
+
+      <h2>11. Troubleshooting rápido</h2>
+      <ul>
+        <li><strong>Erro 502/504:</strong> verifique logs do Traefik (<code>journalctl -u traefik</code>) e Nginx (<code>/var/log/nginx/</code>).</li>
+        <li><strong>HTTPS falhou:</strong> confira se portas 80/443 estão liberadas e DNS propagado. Teste <code>sudo certbot renew --dry-run</code>.</li>
+        <li><strong>API responde 500:</strong> abra <code>/var/www/crm-juridico/dev/crm/backend/storage/logs/laravel.log</code>.</li>
+        <li><strong>Frontend desatualizado:</strong> rode novamente <code>npm run build</code> e copie para <code>/var/www/crm-frontend</code>.</li>
+      </ul>
+
+      <footer>Atualizado em outubro de 2025 • Ajuste os comandos conforme o seu ambiente.</footer>
+    </main>
+  </body>
+</html>

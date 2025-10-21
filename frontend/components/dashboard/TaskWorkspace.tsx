@@ -3,6 +3,7 @@ import dayjs from 'dayjs';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { useApp } from '../../store/AppContext';
+import { useAuth } from '../../store/AuthContext';
 import { useTaskModal } from '../../hooks/useTaskModal';
 import { cn } from '../../lib/utils';
 import {
@@ -17,15 +18,21 @@ import {
 import { TaskBoardView, TaskListView, buildTaskSections, TaskSection } from '../tasks/TaskViews';
 
 const TaskWorkspace: React.FC = () => {
-  const { tasks, users } = useApp();
+  const { tasks } = useApp();
+  const { user: authUser, loading: authLoading } = useAuth();
   const { open: openTaskModal, openForEdit } = useTaskModal();
   const [view, setView] = useState<'list' | 'board'>('list');
 
-  const currentUserId = users[0]?.id;
-  const myTasks = useMemo(
-    () => (currentUserId ? tasks.filter(task => task.responsibleId === currentUserId) : tasks),
-    [tasks, currentUserId]
-  );
+  const currentUserId = authUser?.id;
+  const myTasks = useMemo(() => {
+    if (authLoading) {
+      return [];
+    }
+    if (!currentUserId) {
+      return tasks;
+    }
+    return tasks.filter(task => task.responsibleId === currentUserId);
+  }, [tasks, currentUserId, authLoading]);
 
   const today = dayjs().startOf('day');
 

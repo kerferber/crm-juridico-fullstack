@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import dayjs from 'dayjs';
 import {
@@ -11,6 +11,7 @@ import {
   Link2,
   Edit3,
   Sparkles,
+  CheckCircle2,
 } from 'lucide-react';
 import { useApp } from '../store/AppContext';
 import { useTaskModal } from '../hooks/useTaskModal';
@@ -31,8 +32,9 @@ const statusStyles: Record<TaskStatus, string> = {
 
 const TaskDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const { tasks, users, contacts, lawsuits } = useApp();
+  const { tasks, users, contacts, lawsuits, updateTaskStatus } = useApp();
   const { openForEdit } = useTaskModal();
+  const [updating, setUpdating] = useState(false);
 
   const taskId = Number.parseInt(id ?? '0', 10);
   const task = useMemo(() => tasks.find(item => item.id === taskId), [tasks, taskId]);
@@ -53,6 +55,16 @@ const TaskDetail: React.FC = () => {
     task.status !== TaskStatus.Concluida && task.deadline
       ? dayjs(task.deadline).isBefore(dayjs(), 'day')
       : false;
+
+  const handleComplete = async () => {
+    if (task.status === TaskStatus.Concluida || updating) return;
+    try {
+      setUpdating(true);
+      await updateTaskStatus(task.id, TaskStatus.Concluida);
+    } finally {
+      setUpdating(false);
+    }
+  };
 
   return (
     <div className="space-y-8">
@@ -117,6 +129,15 @@ const TaskDetail: React.FC = () => {
             >
               <Edit3 className="h-4 w-4" />
               Editar tarefa
+            </Button>
+            <Button
+              variant="secondary"
+              className="gap-2 bg-emerald-500 text-white hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60"
+              onClick={handleComplete}
+              disabled={task.status === TaskStatus.Concluida || updating}
+            >
+              <CheckCircle2 className="h-4 w-4" />
+              {task.status === TaskStatus.Concluida ? 'Concluída' : updating ? 'Concluindo...' : 'Concluir tarefa'}
             </Button>
             <Button className="gap-2 bg-primary text-white shadow-sm hover:brightness-105 dark:bg-dark-primary">
               <Sparkles className="h-4 w-4" />

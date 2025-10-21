@@ -3,13 +3,21 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Models\Badge;
+use App\Models\CalendarEvent;
+use App\Models\Contact;
+use App\Models\Lawsuit;
+use App\Models\Level;
+use App\Models\Task;
 use App\Models\Tenant;
+use App\Models\Transaction;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
+use Laravel\Sanctum\PersonalAccessToken;
 
 class TenantController extends Controller
 {
@@ -71,5 +79,29 @@ class TenantController extends Controller
                 'email' => $adminUser->email,
             ] : null,
         ], 201);
+    }
+
+    public function destroy(Tenant $tenant)
+    {
+        DB::transaction(function () use ($tenant) {
+            $tenantId = $tenant->id;
+
+            PersonalAccessToken::where('tokenable_type', User::class)
+                ->whereHas('tokenable', fn ($query) => $query->where('tenant_id', $tenantId))
+                ->delete();
+
+            Task::where('tenant_id', $tenantId)->delete();
+            CalendarEvent::where('tenant_id', $tenantId)->delete();
+            Transaction::where('tenant_id', $tenantId)->delete();
+            Lawsuit::where('tenant_id', $tenantId)->delete();
+            Contact::where('tenant_id', $tenantId)->delete();
+            Badge::where('tenant_id', $tenantId)->delete();
+            Level::where('tenant_id', $tenantId)->delete();
+            User::where('tenant_id', $tenantId)->delete();
+
+            $tenant->delete();
+        });
+
+        return response()->noContent();
     }
 }

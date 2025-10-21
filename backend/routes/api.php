@@ -21,6 +21,7 @@ Route::prefix('admin')->group(function () {
         Route::post('logout', [AdminAuthController::class, 'logout']);
         Route::get('tenants', [TenantController::class, 'index']);
         Route::post('tenants', [TenantController::class, 'store']);
+        Route::delete('tenants/{tenant}', [TenantController::class, 'destroy']);
         Route::get('metrics/overview', [AdminMetricsController::class, 'overview']);
         Route::get('metrics/timeseries', [AdminMetricsController::class, 'timeseries']);
     });

@@ -273,6 +273,59 @@ const generateNotificationId = () => `notif-${Date.now()}-${Math.random().toStri
 const generateRandomId = (prefix: string) =>
   `${prefix}-${Date.now().toString(36)}-${Math.random().toString(16).slice(2, 8)}`;
 
+const buildMentionsSignature = (mentions?: MentionReference[]) =>
+  (mentions ?? [])
+    .map(mention => `${mention.kind}:${mention.id}:${mention.label}`)
+    .sort()
+    .join('|');
+
+const tasksAreEqual = (prev: Task[], next: Task[]) => {
+  if (prev.length !== next.length) return false;
+  const reference = new Map(prev.map(task => [task.id, task]));
+  for (const task of next) {
+    const existing = reference.get(task.id);
+    if (!existing) return false;
+    if (
+      existing.title !== task.title ||
+      existing.status !== task.status ||
+      existing.dueDate !== task.dueDate ||
+      existing.deadline !== task.deadline ||
+      existing.responsibleId !== task.responsibleId ||
+      existing.lawsuitId !== task.lawsuitId ||
+      existing.clientId !== task.clientId ||
+      existing.score !== task.score ||
+      existing.categoryId !== task.categoryId ||
+      (existing.notes || '') !== (task.notes || '') ||
+      buildMentionsSignature(existing.mentions) !== buildMentionsSignature(task.mentions)
+    ) {
+      return false;
+    }
+  }
+  return true;
+};
+
+const notificationsAreEqual = (prev: NotificationItem[], next: NotificationItem[]) => {
+  if (prev.length !== next.length) return false;
+  for (let index = 0; index < prev.length; index += 1) {
+    const current = prev[index];
+    const candidate = next[index];
+    if (
+      current.id !== candidate.id ||
+      current.recipientId !== candidate.recipientId ||
+      current.actorId !== candidate.actorId ||
+      current.title !== candidate.title ||
+      current.message !== candidate.message ||
+      current.createdAt !== candidate.createdAt ||
+      current.isRead !== candidate.isRead ||
+      current.entityType !== candidate.entityType ||
+      current.entityId !== candidate.entityId
+    ) {
+      return false;
+    }
+  }
+  return true;
+};
+
 const mapMentionsFromApi = (raw: any): MentionReference[] => {
   if (!Array.isArray(raw)) return [];
   return raw
@@ -866,6 +919,9 @@ const isWithinDateRange = (
 };
 const mapUserFromApi = (raw: any): User => {
   const name = ensureString(raw?.name, 'Usuário');
+  const role = raw?.role;
+  const roleId = optionalString(raw?.roleId ?? raw?.role_id ?? role?.id);
+  const roleName = optionalString(raw?.roleName ?? raw?.role_name ?? role?.name);
   return {
     id: ensureNumber(raw?.id),
     name,
@@ -884,6 +940,8 @@ const mapUserFromApi = (raw: any): User => {
     linkedinUrl: optionalString(raw?.linkedinUrl ?? raw?.linkedin_url),
     instagramUrl: optionalString(raw?.instagramUrl ?? raw?.instagram_url),
     bio: optionalString(raw?.bio),
+    roleId: roleId ?? undefined,
+    roleName: roleName ?? undefined,
   };
 };
 
@@ -1550,8 +1608,20 @@ interface AppContextType {
     name: string;
     email: string;
     password: string;
+    roleId?: string;
     avatar?: string;
   }) => Promise<User>;
+  updateCollaborator: (
+    userId: number,
+    data: {
+      name: string;
+      email: string;
+      password?: string;
+      roleId?: string;
+      avatar?: string;
+    }
+  ) => Promise<User>;
+  deleteCollaborator: (userId: number) => Promise<void>;
   updateUserCache: (user: User) => void;
   addLawsuit: (data: {
     internalNumber: string;
@@ -1704,14 +1774,78 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     []
   );
 
-  const updateNotificationsState = (updater: (prev: NotificationItem[]) => NotificationItem[]) => {
-    setNotifications(prev => {
-      const next = sortNotifications(updater(prev));
-      const limited = next.slice(0, 200);
-      persistNotifications(limited);
-      return limited;
-    });
-  };
+  const taskAnnotationsRef = useRef(taskAnnotations);
+  const tasksRef = useRef<Task[]>(tasks);
+  const notificationsRef = useRef<NotificationItem[]>(notifications);
+  const pollDelayRef = useRef<number>(10000);
+
+  useEffect(() => {
+    taskAnnotationsRef.current = taskAnnotations;
+  }, [taskAnnotations]);
+
+  useEffect(() => {
+    tasksRef.current = tasks;
+  }, [tasks]);
+
+  useEffect(() => {
+    notificationsRef.current = notifications;
+  }, [notifications]);
+
+  const applyTasksPayload = useCallback(
+    (rawTasks: unknown): boolean => {
+      const baseTasks = toArray<any>(rawTasks).map(mapTaskFromApi);
+      const annotatedTasks = baseTasks.map(task => {
+        const overrides = taskAnnotationsRef.current[task.id];
+        return overrides
+          ? {
+              ...task,
+              notes: overrides.notes ?? task.notes,
+              mentions: overrides.mentions ?? task.mentions,
+            }
+          : task;
+      });
+      const hasChanges = !tasksAreEqual(tasksRef.current, annotatedTasks);
+      if (hasChanges) {
+        setTasks(annotatedTasks);
+        refreshAnnotationCache(
+          setTaskAnnotations,
+          TASK_NOTES_STORAGE_KEY,
+          taskAnnotationsRef.current,
+          annotatedTasks
+        );
+      }
+      return hasChanges;
+    },
+    [setTaskAnnotations]
+  );
+
+  const updateNotificationsState = useCallback(
+    (updater: (prev: NotificationItem[]) => NotificationItem[]) => {
+      setNotifications(prev => {
+        const next = sortNotifications(updater(prev));
+        const limited = next.slice(0, 200);
+        persistNotifications(limited);
+        return limited;
+      });
+    },
+    [setNotifications]
+  );
+
+  const applyNotificationsPayload = useCallback(
+    (rawNotifications: unknown): boolean => {
+      const list = toArray<any>(rawNotifications).map(mapNotificationFromApi);
+      if (list.length === 0) {
+        return false;
+      }
+      const normalized = sortNotifications(list);
+      const hasChanges = !notificationsAreEqual(notificationsRef.current, normalized);
+      if (hasChanges) {
+        updateNotificationsState(() => normalized);
+      }
+      return hasChanges;
+    },
+    [updateNotificationsState]
+  );
 
   const recalculateGoalsInternal = useCallback(
     (goalId?: string) => {
@@ -1909,6 +2043,37 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       });
     }
   };
+
+  const ensureResponsibleMention = useCallback(
+    (mentions: MentionReference[] | undefined, responsibleId?: number | null) => {
+      if (!responsibleId) {
+        return Array.isArray(mentions) ? [...mentions] : [];
+      }
+
+      const normalized = Array.isArray(mentions) ? [...mentions] : [];
+      const alreadyMentioned = normalized.some(
+        mention => mention.kind === 'user' && mention.id === responsibleId
+      );
+      if (alreadyMentioned) {
+        return normalized;
+      }
+
+      const responsibleUser = users.find(user => user.id === responsibleId);
+      if (!responsibleUser) {
+        return normalized;
+      }
+
+      return [
+        ...normalized,
+        {
+          id: responsibleUser.id,
+          kind: 'user',
+          label: responsibleUser.name,
+        } as MentionReference,
+      ];
+    },
+    [users]
+  );
 
   const pushNotification = (
     recipientId: number | undefined,
@@ -2109,25 +2274,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
         const lawsuitsList = lawsuitsRawList.map(mapLawsuitFromApi);
 
         setUsers(toArray<any>(usersRaw).map(mapUserFromApi));
-        const tasksList = toArray<any>(tasksRaw)
-          .map(mapTaskFromApi)
-          .map(task => {
-            const overrides = taskAnnotations[task.id];
-            return overrides
-              ? {
-                  ...task,
-                  notes: overrides.notes ?? task.notes,
-                  mentions: overrides.mentions ?? task.mentions,
-                }
-              : task;
-          });
-        setTasks(tasksList);
-        refreshAnnotationCache(
-          setTaskAnnotations,
-          TASK_NOTES_STORAGE_KEY,
-          taskAnnotations,
-          tasksList
-        );
+        applyTasksPayload(tasksRaw);
         setCalendarEvents(toArray<any>(calendarRaw).map(mapCalendarEventFromApi));
         setTransactions(toArray<any>(transactionsRaw).map(mapTransactionFromApi));
         setKanbanCards(
@@ -2284,7 +2431,96 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     return () => {
       isCancelled = true;
     };
-  }, [authLoading, isAuthenticated, logout]);
+  }, [authLoading, isAuthenticated, logout, applyTasksPayload]);
+
+  useEffect(() => {
+    if (authLoading || !isAuthenticated || isUsingMockApi || !isBrowserEnvironment) {
+      return;
+    }
+
+    let cancelled = false;
+    let timeoutId: number | null = null;
+    const POLL_MIN = 10000;
+    const POLL_MAX = 60000;
+    const BACKOFF_FACTOR = 1.5;
+    pollDelayRef.current = POLL_MIN;
+
+    const scheduleNext = () => {
+      if (cancelled) return;
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId);
+      }
+      timeoutId = window.setTimeout(run, pollDelayRef.current);
+    };
+
+    const run = async () => {
+      if (cancelled) {
+        return;
+      }
+
+      let shouldResetDelay = false;
+
+      try {
+        const tasksPayload = await apiClient.get('/tasks');
+        if (!cancelled) {
+          const changed = applyTasksPayload(tasksPayload);
+          if (changed) {
+            shouldResetDelay = true;
+          }
+        }
+      } catch (error) {
+        if (!cancelled) {
+          console.warn('Falha ao sincronizar tarefas.', error);
+          shouldResetDelay = true;
+        }
+      }
+
+      if (!cancelled) {
+        try {
+          const notificationsPayload = await apiClient.get('/notifications');
+          if (!cancelled) {
+            const changed = applyNotificationsPayload(notificationsPayload);
+            if (changed) {
+              shouldResetDelay = true;
+            }
+          }
+        } catch (error) {
+          if (!cancelled) {
+            const isNotFound = error instanceof ApiError && error.status === 404;
+            if (!isNotFound) {
+              console.warn('Falha ao sincronizar notificações.', error);
+              shouldResetDelay = true;
+            }
+          }
+        }
+      }
+
+      if (cancelled) {
+        return;
+      }
+
+      pollDelayRef.current = shouldResetDelay
+        ? POLL_MIN
+        : Math.min(POLL_MAX, Math.round(pollDelayRef.current * BACKOFF_FACTOR));
+
+      scheduleNext();
+    };
+
+    run();
+
+    return () => {
+      cancelled = true;
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId);
+      }
+    };
+  }, [
+    authLoading,
+    isAuthenticated,
+    isUsingMockApi,
+    applyTasksPayload,
+    applyNotificationsPayload,
+  ]);
 
   const updateKanbanCardColumn = async (cardId: string, newColumn: KanbanColumn, newPhase: KanbanPhase) => {
     const lawsuitId = extractLawsuitIdFromCard(cardId);
@@ -2530,6 +2766,10 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
         : TaskStatus.Pendente;
 
     try {
+      const mentionsWithResponsible = ensureResponsibleMention(
+        taskData.mentions,
+        taskData.responsibleId
+      );
       if (isUsingMockApi) {
         const newId = Math.max(...tasks.map(t => t.id), 0) + 1;
         const newTask: Task = {
@@ -2537,7 +2777,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
           id: newId,
           status: computedStatus,
           notes: taskData.notes,
-          mentions: taskData.mentions ?? [],
+          mentions: mentionsWithResponsible,
         };
         setTasks(prev => [...prev, newTask]);
         createNotificationsForMentions(newTask.mentions, 'task', newId, newTask.title);
@@ -2562,7 +2802,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
         status: computedStatus,
         category_id: taskData.categoryId ?? null,
         notes: taskData.notes,
-        mentions: (taskData.mentions ?? []).map(mention => ({
+        mentions: mentionsWithResponsible.map(mention => ({
           id: mention.id,
           kind: mention.kind,
         })),
@@ -2573,7 +2813,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       const enriched: Task = {
         ...mapped,
         notes: taskData.notes,
-        mentions: taskData.mentions ?? [],
+        mentions: mentionsWithResponsible,
       };
       setTasks(prev => [...prev, enriched]);
       createNotificationsForMentions(enriched.mentions, 'task', enriched.id, enriched.title);
@@ -2754,6 +2994,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     name: string;
     email: string;
     password: string;
+    roleId?: string;
     avatar?: string;
   }): Promise<User> => {
     try {
@@ -2764,6 +3005,10 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
           email: data.email,
           avatar: data.avatar ?? avatarFallback(data.name),
           personalEmail: data.email,
+          roleId: data.roleId,
+          roleName: data.roleId
+            ? userRoles.find(role => role.id === data.roleId)?.name
+            : undefined,
         };
         setUsers(prev => [...prev, newUser]);
         setError(null);
@@ -2776,19 +3021,105 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
         password: data.password,
         avatar: data.avatar,
         personal_email: data.email,
+        role_id: data.roleId ?? null,
       };
 
       const created = await apiClient.post('/users', payload);
       const mapped = mapUserFromApi(created);
-      setUsers(prev => [...prev, mapped]);
+      const enriched = mapped.roleId && !mapped.roleName
+        ? { ...mapped, roleName: userRoles.find(role => role.id === mapped.roleId)?.name }
+        : mapped;
+      setUsers(prev => [...prev, enriched]);
       setError(null);
-      return mapped;
+      return enriched;
     } catch (err) {
       console.error(err);
       if (err instanceof ApiError && err.status === 422) {
         throw err;
       }
       setError('Não foi possível cadastrar o colaborador.');
+      throw err;
+    }
+  };
+
+  const updateCollaborator = async (
+    userId: number,
+    data: {
+      name: string;
+      email: string;
+      password?: string;
+      roleId?: string;
+      avatar?: string;
+    }
+  ): Promise<User> => {
+    try {
+      if (isUsingMockApi) {
+        const updated: User | undefined = users.find(user => user.id === userId);
+        if (!updated) {
+          throw new Error('Colaborador não encontrado.');
+        }
+        const merged: User = {
+          ...updated,
+          name: data.name,
+          email: data.email,
+          personalEmail: data.email,
+          avatar: data.avatar ?? updated.avatar,
+          roleId: data.roleId ?? updated.roleId,
+          roleName:
+            data.roleId !== undefined
+              ? userRoles.find(role => role.id === data.roleId)?.name ?? updated.roleName
+              : updated.roleName,
+        };
+        setUsers(prev => prev.map(user => (user.id === userId ? merged : user)));
+        setError(null);
+        return merged;
+      }
+
+      const payload: Record<string, any> = {
+        name: data.name,
+        email: data.email,
+        personal_email: data.email,
+        role_id: data.roleId ?? null,
+      };
+      if (data.password && data.password.trim().length >= 8) {
+        payload.password = data.password.trim();
+      }
+      if (data.avatar) {
+        payload.avatar = data.avatar;
+      }
+
+      const response = await apiClient.put(`/users/${userId}`, payload);
+      const mapped = mapUserFromApi(response);
+      const enriched = mapped.roleId && !mapped.roleName
+        ? { ...mapped, roleName: userRoles.find(role => role.id === mapped.roleId)?.name }
+        : mapped;
+      setUsers(prev => prev.map(user => (user.id === userId ? enriched : user)));
+      setError(null);
+      return enriched;
+    } catch (err) {
+      console.error(err);
+      if (err instanceof ApiError && err.status === 422) {
+        throw err;
+      }
+      setError('Não foi possível atualizar o colaborador.');
+      throw err;
+    }
+  };
+
+  const deleteCollaborator = async (userId: number): Promise<void> => {
+    try {
+      if (isUsingMockApi) {
+        setUsers(prev => prev.filter(user => user.id !== userId));
+        setError(null);
+        return;
+      }
+
+      await apiClient.delete(`/users/${userId}`);
+      setUsers(prev => prev.filter(user => user.id !== userId));
+      setError(null);
+    } catch (err) {
+      console.error(err);
+      setError('Não foi possível remover o colaborador.');
       throw err;
     }
   };
@@ -3835,6 +4166,8 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     addKanbanCard,
     addContact,
     createCollaborator,
+    updateCollaborator,
+    deleteCollaborator,
     updateUserCache,
     addLawsuit,
     addTransaction,

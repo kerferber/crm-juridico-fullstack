@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { ShieldCheck, Users, BarChart2, LogOut, FileText } from 'lucide-react';
+import { ShieldCheck, Users, BarChart2, LogOut, FileText, ServerCog, Menu, X } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { useAdminAuth } from '../../store/AdminAuthContext';
 
@@ -8,11 +8,13 @@ const navItems = [
   { to: '/admin/dashboard', label: 'Dashboard', icon: BarChart2 },
   { to: '/admin/tenants', label: 'Tenants', icon: Users },
   { to: '/admin/api-docs', label: 'Documentação', icon: FileText },
+  { to: '/admin/deploy-guide', label: 'Guia de Deploy', icon: ServerCog },
 ];
 
 const AdminLayout: React.FC = () => {
   const { admin, logout } = useAdminAuth();
   const navigate = useNavigate();
+  const [isNavOpen, setIsNavOpen] = useState(false);
 
   const handleLogout = async () => {
     await logout();
@@ -21,7 +23,18 @@ const AdminLayout: React.FC = () => {
 
   return (
     <div className="flex min-h-screen bg-surface-muted text-foreground dark:bg-dark-background">
-      <aside className="hidden w-64 flex-shrink-0 flex-col border-r border-border/70 bg-surface px-6 py-8 dark:border-dark-border/60 dark:bg-dark-surface lg:flex">
+      {isNavOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/50 backdrop-blur-sm lg:hidden"
+          onClick={() => setIsNavOpen(false)}
+          aria-hidden
+        />
+      )}
+      <aside
+        className={`fixed inset-y-0 left-0 z-40 flex w-72 flex-shrink-0 flex-col border-r border-border/70 bg-surface px-6 py-8 transition-transform duration-300 dark:border-dark-border/60 dark:bg-dark-surface lg:static lg:translate-x-0 lg:flex ${
+          isNavOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
         <div className="flex items-center gap-3">
           <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10">
             <ShieldCheck className="h-6 w-6 text-primary" />
@@ -32,6 +45,15 @@ const AdminLayout: React.FC = () => {
             </p>
             <h1 className="text-lg font-semibold">Painel SaaS</h1>
           </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="ml-auto text-muted-foreground hover:text-foreground lg:hidden"
+            onClick={() => setIsNavOpen(false)}
+            aria-label="Fechar menu"
+          >
+            <X className="h-5 w-5" />
+          </Button>
         </div>
 
         <nav className="mt-10 flex-1 space-y-2 text-sm">
@@ -69,18 +91,29 @@ const AdminLayout: React.FC = () => {
 
       <div className="flex min-h-screen flex-1 flex-col">
         <header className="flex items-center justify-between border-b border-border/70 bg-surface px-4 py-3 dark:border-dark-border/60 dark:bg-dark-surface lg:px-8">
-          <div className="lg:hidden">
-            <h1 className="text-lg font-semibold">Painel SaaS</h1>
-            <p className="text-xs text-muted-foreground">Administração central do CRM</p>
+          <div className="flex items-center gap-3 lg:hidden">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-muted-foreground hover:text-foreground"
+              onClick={() => setIsNavOpen(true)}
+              aria-label="Abrir menu"
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
+            <div>
+              <h1 className="text-lg font-semibold">Painel SaaS</h1>
+              <p className="text-xs text-muted-foreground">Administração central do CRM</p>
+            </div>
           </div>
-          <Button variant="ghost" className="lg:hidden" onClick={handleLogout}>
-            <LogOut className="h-4 w-4" />
-          </Button>
           <div className="hidden items-center gap-4 text-sm text-muted-foreground lg:flex">
             <span>{admin?.name}</span>
             <span className="h-1 w-1 rounded-full bg-primary" />
             <span>{admin?.email}</span>
           </div>
+          <Button variant="ghost" className="lg:hidden" onClick={handleLogout} aria-label="Sair">
+            <LogOut className="h-4 w-4" />
+          </Button>
         </header>
 
         <main className="flex-1 overflow-y-auto px-4 py-6 lg:px-10 lg:py-8">

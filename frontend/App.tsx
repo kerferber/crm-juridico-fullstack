@@ -43,6 +43,7 @@ import AdminLayout from './pages/admin/AdminLayout';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminTenants from './pages/admin/AdminTenants';
 import AdminApiDocs from './pages/admin/AdminApiDocs';
+import AdminDeployGuide from './pages/admin/AdminDeployGuide';
 
 dayjs.extend(relativeTime);
 
@@ -132,6 +133,7 @@ const App: React.FC = () => {
                             <Route path="dashboard" element={<AdminDashboard />} />
                             <Route path="tenants" element={<AdminTenants />} />
                             <Route path="api-docs" element={<AdminApiDocs />} />
+                            <Route path="deploy-guide" element={<AdminDeployGuide />} />
                           </Route>
                           <Route path="/" element={<ProtectedLayout />}>
                             <Route index element={<Dashboard />} />

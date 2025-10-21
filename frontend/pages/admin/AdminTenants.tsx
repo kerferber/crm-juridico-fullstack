@@ -220,6 +220,22 @@ const AdminTenants: React.FC = () => {
         <p className="mt-1 text-sm text-muted-foreground">
           Informe um nome amigável e, opcionalmente, um slug fixo para integrações e automações.
         </p>
+        <div className="mt-4 rounded-2xl border border-sky-300/60 bg-sky-50/70 p-4 text-sm text-slate-700 shadow-sm dark:border-sky-500/40 dark:bg-sky-900/30 dark:text-slate-100">
+          <p className="font-semibold text-slate-800 dark:text-white">Precisa publicar o CRM em produção?</p>
+          <p className="mt-1 text-xs text-slate-600 dark:text-slate-200">
+            Consulte o passo a passo completo de deploy (Laravel + React + Nginx + HTTPS) para subir um novo workspace em uma VPS.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <a
+              href="/instructions.html"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 rounded-full bg-sky-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-sky-700"
+            >
+              Abrir guia de deploy
+            </a>
+          </div>
+        </div>
 
         <form className="mt-5 space-y-4" onSubmit={handleSubmit}>
           <div className="grid gap-4 sm:grid-cols-2">

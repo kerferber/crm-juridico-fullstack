@@ -12,6 +12,7 @@ use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Laravel\Sanctum\PersonalAccessToken;
 
 class AdminMetricsController extends Controller
 {
@@ -20,13 +21,14 @@ class AdminMetricsController extends Controller
         $now = Carbon::now();
         $since30Days = $now->copy()->subDays(30);
         $since24Hours = $now->copy()->subDay();
+        $sinceFiveMinutes = $now->copy()->subMinutes(5);
 
         $tenants = Tenant::query()
             ->withCount('users')
             ->orderBy('created_at', 'asc')
             ->get();
 
-        $tenantMetrics = $tenants->map(function (Tenant $tenant) use ($since30Days, $since24Hours) {
+        $tenantMetrics = $tenants->map(function (Tenant $tenant) use ($since30Days, $since24Hours, $sinceFiveMinutes) {
             $tenantId = $tenant->id;
 
             $tasksQuery = Task::where('tenant_id', $tenantId);
@@ -37,6 +39,15 @@ class AdminMetricsController extends Controller
 
             $revenue = (float) (clone $transactionsQuery)->where('type', 'Receita')->sum('value');
             $expense = (float) (clone $transactionsQuery)->where('type', 'Despesa')->sum('value');
+            $activeSessions = PersonalAccessToken::where('tokenable_type', User::class)
+                ->where(function ($query) use ($sinceFiveMinutes) {
+                    $query->where('last_used_at', '>=', $sinceFiveMinutes)
+                        ->orWhere('created_at', '>=', $sinceFiveMinutes);
+                })
+                ->whereHasMorph('tokenable', [User::class], function ($query) use ($tenantId) {
+                    $query->where('tenant_id', $tenantId);
+                })
+                ->count();
 
             return [
                 'tenant' => [
@@ -52,6 +63,7 @@ class AdminMetricsController extends Controller
                     'tasks_last_30_days' => (clone $tasksQuery)->where('created_at', '>=', $since30Days)->count(),
                     'users_total' => (clone $usersQuery)->count(),
                     'users_active_24h' => (clone $usersQuery)->where('last_login_at', '>=', $since24Hours)->count(),
+                    'sessions_active_5m' => $activeSessions,
                     'contacts_total' => (clone $contactsQuery)->count(),
                     'lawsuits_total' => (clone $lawsuitsQuery)->count(),
                     'transactions' => [
@@ -125,6 +137,7 @@ class AdminMetricsController extends Controller
             'tasks_last_30_days' => 0,
             'users_total' => 0,
             'users_active_24h' => 0,
+            'sessions_active_5m' => 0,
             'contacts_total' => 0,
             'lawsuits_total' => 0,
             'transactions' => [
@@ -132,6 +145,7 @@ class AdminMetricsController extends Controller
                 'expense' => 0.0,
                 'net' => 0.0,
             ],
+            'tenants_total' => $tenantMetrics->count(),
         ];
 
         return $tenantMetrics->reduce(function ($carry, $tenant) {
@@ -141,6 +155,7 @@ class AdminMetricsController extends Controller
             $carry['tasks_last_30_days'] += $metrics['tasks_last_30_days'];
             $carry['users_total'] += $metrics['users_total'];
             $carry['users_active_24h'] += $metrics['users_active_24h'];
+            $carry['sessions_active_5m'] += $metrics['sessions_active_5m'];
             $carry['contacts_total'] += $metrics['contacts_total'];
             $carry['lawsuits_total'] += $metrics['lawsuits_total'];
             $carry['transactions']['revenue'] += $metrics['transactions']['revenue'];

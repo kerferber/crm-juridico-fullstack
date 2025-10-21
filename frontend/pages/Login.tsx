@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../store/AuthContext';
 import { ApiError } from '../services/api';
 import { Button } from '../components/ui/Button';
@@ -10,9 +10,10 @@ const Login: React.FC = () => {
   const { login, isAuthenticated, loading, tenantSlug, setTenantSlug } = useAuth();
   const [email, setEmail] = useState('fernandokerber@gmail.com');
   const [password, setPassword] = useState('');
-  const [tenant, setTenant] = useState(() => tenantSlug ?? '');
+  const [tenant, setTenant] = useState(() => tenantSlug ?? 'default');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     if (!loading && isAuthenticated) {
@@ -21,7 +22,7 @@ const Login: React.FC = () => {
   }, [isAuthenticated, loading, navigate]);
 
   useEffect(() => {
-    if (tenantSlug && !tenant) {
+    if (tenantSlug && (tenant === '' || tenant === 'default')) {
       setTenant(tenantSlug);
     }
   }, [tenant, tenantSlug]);
@@ -59,65 +60,63 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-10 dark:bg-dark-background">
-      <div className="flex w-full max-w-5xl overflow-hidden rounded-3xl border border-border/70 bg-surface shadow-xl dark:border-dark-border/60 dark:bg-dark-surface">
-        <div className="hidden flex-1 flex-col justify-between bg-primary text-primary-foreground lg:flex">
-          <div className="flex h-full flex-col justify-between p-10">
-            <div className="space-y-6">
-              <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.28em] text-primary-foreground/80">
-                <span className="h-px flex-1 bg-primary-foreground/30" />
-                CRM Jurídico
-                <span className="h-px flex-1 bg-primary-foreground/30" />
-              </div>
-              <h1 className="text-3xl font-semibold leading-tight text-primary-foreground">
-                Workflow Studio para equipes jurídicas modernas.
-              </h1>
-              <p className="max-w-sm text-sm text-primary-foreground/80">
-                Centralize tarefas, acompanhe processos em tempo real e colabore com o time em um
-                único painel de controle.
-              </p>
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-[#050818] via-[#0e1536] to-[#050818] px-4 py-4 text-foreground md:py-6 dark:from-[#020617] dark:via-[#0f172a] dark:to-[#020617]">
+      <div className="pointer-events-none absolute inset-0 -z-10">
+        <div className="absolute left-1/2 top-12 h-80 w-80 -translate-x-1/2 rounded-full bg-primary/30 blur-3xl" />
+        <div className="absolute bottom-32 right-8 h-64 w-64 rounded-full bg-primary/20 blur-3xl" />
+        <div className="absolute -left-10 bottom-0 h-72 w-72 rounded-full bg-primary/25 blur-3xl" />
+      </div>
+      <div className="flex w-full max-w-5xl overflow-hidden rounded-[30px] border border-white/10 bg-white/10 shadow-[0_28px_70px_-40px_rgba(15,23,42,1)] backdrop-blur-2xl dark:border-white/5 dark:bg-white/5">
+        <div className="hidden flex-1 flex-col justify-between bg-gradient-to-br from-white/10 via-white/5 to-white/0 p-8 text-primary-foreground backdrop-blur-xl dark:from-primary/20 dark:via-primary/10 dark:to-primary/5 lg:flex lg:p-9">
+          <div className="space-y-5 text-white">
+            <div className="flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.32em] text-white/70">
+              <span className="h-px flex-1 bg-white/30" />
+              Argos Lex · CRM Jurídico
+              <span className="h-px flex-1 bg-white/30" />
             </div>
-            <div className="space-y-3 rounded-2xl bg-primary-foreground/10 p-6">
-              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-primary-foreground/70">
-                Destaques
-              </p>
-              <ul className="space-y-2 text-sm text-primary-foreground/90">
-                <li>• Kanban intuitivo para gestão de processos</li>
-                <li>• Automatizações e alertas de prazos críticos</li>
-                <li>• Indicadores para acompanhar metas e receitas</li>
-              </ul>
-            </div>
+            <h1 className="text-[30px] font-semibold leading-snug text-white">
+              O CRM jurídico que acompanha o ritmo do seu escritório.
+            </h1>
+            <p className="max-w-sm text-sm text-white/80">
+              Centralize tarefas, prazos e relacionamentos com a precisão que a advocacia exige.
+            </p>
+          </div>
+          <div className="space-y-3 rounded-2xl border border-white/10 bg-white/10 p-5 text-white/90 shadow-inner">
+            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-white/60">Destaques Argos Lex</p>
+            <ul className="space-y-2 text-sm">
+              <li>• Painéis em tempo real para decisões rápidas</li>
+              <li>• Automação de tarefas críticas e alertas inteligentes</li>
+            </ul>
           </div>
         </div>
-        <div className="flex flex-1 flex-col justify-center bg-surface px-6 py-10 dark:bg-dark-surface sm:px-12">
-          <div className="mb-8">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary/70">
+        <div className="flex flex-1 flex-col justify-center bg-white/75 px-7 py-7 backdrop-blur-xl dark:bg-slate-950/75 sm:px-10 md:px-11">
+          <div className="mb-6">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary/80">
               Acesso seguro
             </p>
-            <h2 className="mt-3 text-[28px] font-semibold text-foreground">
-              Entre com sua conta
+            <h2 className="mt-3 text-[26px] font-semibold text-slate-900 dark:text-white">
+              Entre na sua conta Argos Lex
             </h2>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Bem-vindo de volta! Use suas credenciais para acessar o Workflow Studio.
-            </p>
           </div>
           <form className="space-y-5" onSubmit={handleSubmit}>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">
+              <label className="text-sm font-medium text-slate-600 dark:text-slate-300">
                 Identificador do workspace
               </label>
               <input
                 type="text"
                 required
                 autoComplete="organization"
-                placeholder="ex: meu-escritorio"
+                placeholder="default"
                 value={tenant}
                 onChange={event => setTenant(event.target.value)}
-                className="w-full rounded-xl border border-border/70 bg-surface px-4 py-3 text-sm text-foreground shadow-sm outline-none transition focus:border-primary/60 focus:ring-2 focus:ring-primary/30 dark:border-dark-border/60 dark:bg-dark-surface"
+                className="w-full rounded-2xl border border-white/45 bg-white/70 px-4 py-[10px] text-sm text-slate-900 shadow-lg shadow-primary/5 outline-none transition focus:border-primary/70 focus:ring-4 focus:ring-primary/20 dark:border-white/10 dark:bg-slate-900/70 dark:text-white"
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">E-mail corporativo</label>
+              <label className="text-sm font-medium text-slate-600 dark:text-slate-300">
+                E-mail corporativo
+              </label>
               <input
                 type="email"
                 required
@@ -125,39 +124,48 @@ const Login: React.FC = () => {
                 placeholder="nome@empresa.com"
                 value={email}
                 onChange={event => setEmail(event.target.value)}
-                className="w-full rounded-xl border border-border/70 bg-surface px-4 py-3 text-sm text-foreground shadow-sm outline-none transition focus:border-primary/60 focus:ring-2 focus:ring-primary/30 dark:border-dark-border/60 dark:bg-dark-surface"
+                className="w-full rounded-2xl border border-white/45 bg-white/70 px-4 py-[10px] text-sm text-slate-900 shadow-lg shadow-primary/5 outline-none transition focus:border-primary/70 focus:ring-4 focus:ring-primary/20 dark:border-white/10 dark:bg-slate-900/70 dark:text-white"
               />
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
-                <label className="font-medium text-muted-foreground">Senha</label>
-                <button
-                  type="button"
-                  className="text-xs font-semibold text-primary transition hover:brightness-110"
-                  onClick={() => setPassword('')}
-                >
-                  Limpar
-                </button>
+                <label className="font-medium text-slate-600 dark:text-slate-300">Senha</label>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    className="text-xs font-semibold text-primary transition hover:brightness-110"
+                    onClick={() => setShowPassword(prev => !prev)}
+                  >
+                    {showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                  </button>
+                  <button
+                    type="button"
+                    className="text-xs font-semibold text-primary/80 transition hover:text-primary"
+                    onClick={() => setPassword('')}
+                  >
+                    Limpar
+                  </button>
+                </div>
               </div>
               <input
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 required
                 minLength={8}
                 autoComplete="current-password"
                 placeholder="Digite sua senha"
                 value={password}
                 onChange={event => setPassword(event.target.value)}
-                className="w-full rounded-xl border border-border/70 bg-surface px-4 py-3 text-sm text-foreground shadow-sm outline-none transition focus:border-primary/60 focus:ring-2 focus:ring-primary/30 dark:border-dark-border/60 dark:bg-dark-surface"
+                className="w-full rounded-2xl border border-white/45 bg-white/70 px-4 py-[10px] text-sm text-slate-900 shadow-lg shadow-primary/5 outline-none transition focus:border-primary/70 focus:ring-4 focus:ring-primary/20 dark:border-white/10 dark:bg-slate-900/70 dark:text-white"
               />
             </div>
             {error && (
-              <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+              <div className="rounded-2xl border border-red-200/60 bg-red-50/80 px-4 py-3 text-sm font-medium text-red-600 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-200">
                 {error}
               </div>
             )}
             <Button
               type="submit"
-              className="relative flex h-11 w-full items-center justify-center rounded-xl bg-primary text-sm font-semibold text-white shadow-lg transition hover:brightness-105 focus-visible:ring-2 focus-visible:ring-primary/50"
+              className="relative flex h-11 w-full items-center justify-center rounded-2xl bg-gradient-to-r from-primary via-primary/90 to-primary/70 text-sm font-semibold text-white shadow-[0_16px_38px_-18px_rgba(37,99,235,1)] transition hover:scale-[1.01] focus-visible:ring-4 focus-visible:ring-primary/30"
               disabled={submitting}
             >
               {submitting ? (
@@ -170,16 +178,13 @@ const Login: React.FC = () => {
               )}
             </Button>
           </form>
-          <div className="mt-8 flex items-center gap-3 text-xs uppercase tracking-[0.3em] text-muted-foreground">
-            <span className="h-px flex-1 bg-border/60" />
-            CRM Jurídico · Workflow Studio
-            <span className="h-px flex-1 bg-border/60" />
+          <div className="mt-6 flex items-center gap-3 text-[10px] uppercase tracking-[0.32em] text-slate-400 dark:text-slate-500">
+            <span className="h-px flex-1 bg-slate-300/35" />
+            Argos Lex · CRM Jurídico
+            <span className="h-px flex-1 bg-slate-300/35" />
           </div>
-          <p className="mt-4 text-center text-xs text-muted-foreground">
-            Precisa criar um workspace?{' '}
-            <Link to="/admin/login" className="font-semibold text-primary hover:underline">
-              Abrir painel de tenants
-            </Link>
+          <p className="mt-3 text-center text-xs font-semibold uppercase tracking-[0.28em] text-slate-200 dark:text-slate-100">
+            Desenvolvido por Fernando Kerber
           </p>
         </div>
       </div>

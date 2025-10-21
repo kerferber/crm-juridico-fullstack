@@ -55,6 +55,8 @@ export interface User {
   linkedinUrl?: string;
   instagramUrl?: string;
   bio?: string;
+  roleId?: string;
+  roleName?: string;
 }
 
 export interface Contact {

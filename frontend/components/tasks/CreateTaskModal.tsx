@@ -4,6 +4,7 @@ import { Button } from '../ui/Button';
 import { Loader2, ClipboardList, X, CheckCircle } from 'lucide-react';
 import { useTaskModal } from '../../hooks/useTaskModal';
 import { useApp } from '../../store/AppContext';
+import { useAuth } from '../../store/AuthContext';
 import { TaskStatus, MentionReference } from '../../types/types';
 import MentionTextarea from '../inputs/MentionTextarea';
 import ContactSearchInput from '../contacts/ContactSearchInput';
@@ -13,6 +14,7 @@ const STATUS_OPTIONS = [TaskStatus.Pendente, TaskStatus.Atrasada, TaskStatus.Con
 const CreateTaskModal: React.FC = () => {
   const { isOpen, mode, task, defaults, close } = useTaskModal();
   const { users, lawsuits, contacts, addTask, updateTask, updateTaskStatus, categoryGroups } = useApp();
+  const { user: authUser } = useAuth();
 
   const [title, setTitle] = useState('');
   const [dueDate, setDueDate] = useState('');
@@ -29,7 +31,10 @@ const CreateTaskModal: React.FC = () => {
   const [isCompleting, setIsCompleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const defaultResponsibleId = useMemo(() => users[0]?.id ?? '', [users]);
+  const defaultResponsibleId = useMemo(
+    () => authUser?.id ?? users[0]?.id ?? '',
+    [authUser?.id, users]
+  );
   const filteredLawsuits = useMemo(() => {
     if (typeof contactId === 'number') {
       return lawsuits.filter(lawsuit => lawsuit.clientId === contactId);
