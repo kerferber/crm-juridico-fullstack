@@ -43,7 +43,9 @@ import AdminLayout from './pages/admin/AdminLayout';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminTenants from './pages/admin/AdminTenants';
 import AdminApiDocs from './pages/admin/AdminApiDocs';
+import AdminAiSettings from './pages/admin/AdminAiSettings';
 import AdminDeployGuide from './pages/admin/AdminDeployGuide';
+import Payments from './pages/Payments';
 
 dayjs.extend(relativeTime);
 
@@ -132,6 +134,7 @@ const App: React.FC = () => {
                             <Route index element={<Navigate to="/admin/dashboard" replace />} />
                             <Route path="dashboard" element={<AdminDashboard />} />
                             <Route path="tenants" element={<AdminTenants />} />
+                            <Route path="ai-settings" element={<AdminAiSettings />} />
                             <Route path="api-docs" element={<AdminApiDocs />} />
                             <Route path="deploy-guide" element={<AdminDeployGuide />} />
                           </Route>
@@ -147,6 +150,7 @@ const App: React.FC = () => {
                             <Route path="agenda" element={<Agenda />} />
                             <Route path="notificacoes" element={<Notifications />} />
                             <Route path="financeiro" element={<Financial />} />
+                            <Route path="pagamentos" element={<Payments />} />
                             <Route path="insights" element={<Insights />} />
                             <Route path="gestao" element={<Management />} />
                             <Route path="gamificacao" element={<Gamification />} />

@@ -15,6 +15,7 @@ import {
   ChevronsLeft,
   X,
   Sparkles,
+  CalendarDays,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
@@ -57,6 +58,7 @@ const NAV_SECTIONS: { id: string; title: string; items: NavItem[] }[] = [
       { to: '/insights', label: 'Insights', icon: Sparkles, accentClass: 'bg-amber-500' },
       { to: '/gestao', label: 'Relatórios', icon: BarChart3, accentClass: 'bg-primary/80' },
       { to: '/financeiro', label: 'Portfólio financeiro', icon: DollarSign, accentClass: 'bg-indigo-500' },
+      { to: '/pagamentos', label: 'Pagamentos previstos', icon: CalendarDays, accentClass: 'bg-emerald-500' },
       { to: '/gamificacao', label: 'Resultados & Gamificação', icon: Trophy, accentClass: 'bg-purple-500' },
     ],
   },

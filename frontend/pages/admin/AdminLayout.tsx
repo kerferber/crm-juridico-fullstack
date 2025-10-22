@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { ShieldCheck, Users, BarChart2, LogOut, FileText, ServerCog, Menu, X } from 'lucide-react';
+import { ShieldCheck, Users, BarChart2, LogOut, FileText, ServerCog, Menu, X, Sparkles } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { useAdminAuth } from '../../store/AdminAuthContext';
 
 const navItems = [
   { to: '/admin/dashboard', label: 'Dashboard', icon: BarChart2 },
   { to: '/admin/tenants', label: 'Tenants', icon: Users },
+  { to: '/admin/ai-settings', label: 'Configurações de IA', icon: Sparkles },
   { to: '/admin/api-docs', label: 'Documentação', icon: FileText },
   { to: '/admin/deploy-guide', label: 'Guia de Deploy', icon: ServerCog },
 ];

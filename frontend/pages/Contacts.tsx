@@ -15,6 +15,7 @@ import {
   Mail,
   IdCard,
   Upload,
+  Trash2,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { cn } from '../lib/utils';
@@ -65,7 +66,7 @@ const getBadgeStyles = (color?: string): React.CSSProperties | undefined => {
 };
 
 const Contacts: React.FC = () => {
-  const { contacts, users, lawsuits, tasks, categoryGroups } = useApp();
+  const { contacts, users, lawsuits, tasks, categoryGroups, deleteContact } = useApp();
   const { open: openContactModal } = useContactModal();
   const { openForCreate: openTaskModal } = useTaskModal();
   const { open: openProcessModal } = useProcessModal();
@@ -75,6 +76,8 @@ const Contacts: React.FC = () => {
   const [selectedLeadCategory, setSelectedLeadCategory] = useState('all');
   const [selectedOwner, setSelectedOwner] = useState('all');
   const [selectedOrigin, setSelectedOrigin] = useState('all');
+  const [deletingContactId, setDeletingContactId] = useState<number | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const contactsWithProcesses = useMemo(() => {
     return lawsuits.reduce<Record<number, number>>((acc, lawsuit) => {
@@ -233,6 +236,26 @@ const Contacts: React.FC = () => {
     setSelectedOrigin('all');
   };
 
+  const handleDeleteContact = async (target: typeof contacts[number]) => {
+    const confirmed = window.confirm(
+      `Excluir o contato "${target.name}"? Esta ação não pode ser desfeita.`
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setActionError(null);
+      setDeletingContactId(target.id);
+      await deleteContact(target.id);
+    } catch (err) {
+      console.error(err);
+      setActionError('Não foi possível excluir o contato selecionado.');
+    } finally {
+      setDeletingContactId(null);
+    }
+  };
+
   return (
     <div className="space-y-5">
       <section className="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-[#F1F6FF] via-white to-[#E9F2FF] px-6 py-7 text-slate-800 shadow-[0_24px_68px_-44px_rgba(15,23,42,0.35)] dark:border-dark-border/60 dark:from-[#1E1B4B] dark:via-[#3730A3] dark:to-[#1E3A8A] dark:text-white">
@@ -351,6 +374,11 @@ const Contacts: React.FC = () => {
         </CardHeader>
 
         <CardContent className="space-y-6">
+          {actionError && (
+            <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-200">
+              {actionError}
+            </p>
+          )}
           <div className="flex flex-wrap items-center gap-2">
             {contactCategoryOptions.map(option => {
               const isActive = selectedContactCategory === option.id;
@@ -561,25 +589,35 @@ const Contacts: React.FC = () => {
                       >
                         <Briefcase className="h-4 w-4" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 rounded-md border border-slate-200 text-sky-600 hover:border-sky-300 hover:bg-sky-50 dark:border-dark-border/60 dark:text-dark-primary dark:hover:border-dark-primary/50 dark:hover:bg-dark-primary/15"
-                        title="Nova tarefa"
-                        onClick={() =>
-                          openTaskModal({
-                            clientId: contact.id,
-                            responsibleId: contact.ownerId ?? users[0]?.id,
-                          })
-                        }
-                      >
-                        <ClipboardList className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="rounded-md border-sky-400 px-3 py-1 text-xs font-semibold text-sky-600 hover:bg-sky-50 dark:border-dark-primary/40 dark:text-dark-primary dark:hover:bg-dark-primary/15"
-                        asChild
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 rounded-md border border-slate-200 text-sky-600 hover:border-sky-300 hover:bg-sky-50 dark:border-dark-border/60 dark:text-dark-primary dark:hover:border-dark-primary/50 dark:hover:bg-dark-primary/15"
+                      title="Nova tarefa"
+                      onClick={() =>
+                        openTaskModal({
+                          clientId: contact.id,
+                          responsibleId: contact.ownerId ?? users[0]?.id,
+                        })
+                      }
+                    >
+                      <ClipboardList className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 rounded-md border border-red-200 text-red-600 hover:border-red-400 hover:bg-red-50 dark:border-red-500/40 dark:text-red-300 dark:hover:border-red-400 dark:hover:bg-red-500/15"
+                      title="Excluir contato"
+                      onClick={() => handleDeleteContact(contact)}
+                      disabled={deletingContactId === contact.id}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="rounded-md border-sky-400 px-3 py-1 text-xs font-semibold text-sky-600 hover:bg-sky-50 dark:border-dark-primary/40 dark:text-dark-primary dark:hover:bg-dark-primary/15"
+                      asChild
                       >
                         <Link to={`/contatos/${contact.id}`}>Ver perfil</Link>
                       </Button>

@@ -40,4 +40,9 @@ class Contact extends Model
     {
         return $this->hasMany(Lawsuit::class, 'client_id');
     }
+
+    public function paymentSchedules()
+    {
+        return $this->hasMany(PaymentSchedule::class);
+    }
 }

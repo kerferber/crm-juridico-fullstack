@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import React, { useMemo, useState } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useApp } from '../store/AppContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import {
@@ -14,20 +14,36 @@ import {
   Building2,
   Sparkles,
   Plus,
+  Trash2,
+  Loader2,
 } from 'lucide-react';
-import { formatDocument, formatDate } from '../lib/utils';
+import { formatDocument, formatDate, formatCurrency } from '../lib/utils';
 import TaskShortcutCard from '../components/tasks/TaskShortcutCard';
 import { useTaskModal } from '../hooks/useTaskModal';
 import { useProcessModal } from '../hooks/useProcessModal';
 import { Button } from '../components/ui/Button';
 import dayjs from 'dayjs';
 import MentionBadges from '../components/mentions/MentionBadges';
+import PaymentScheduleModal from '../components/payments/PaymentScheduleModal';
 
 const ContactDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const { contacts, lawsuits, tasks, users } = useApp();
+  const {
+    contacts,
+    lawsuits,
+    tasks,
+    users,
+    paymentSchedules,
+    addPaymentSchedule,
+    deletePaymentSchedule,
+    markPaymentInstallmentAsPaid,
+    deleteContact,
+  } = useApp();
   const { openForEdit, openForCreate } = useTaskModal();
   const { open: openProcessModal } = useProcessModal();
+  const navigate = useNavigate();
+  const [deleting, setDeleting] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
   
   const contactId = parseInt(id || '0', 10);
   const contact = contacts.find(c => c.id === contactId);
@@ -63,6 +79,97 @@ const ContactDetail: React.FC = () => {
     if (!bDate) return -1;
     return aDate.valueOf() - bDate.valueOf();
   });
+
+  const [isScheduleModalOpen, setScheduleModalOpen] = useState(false);
+  const [processingInstallmentId, setProcessingInstallmentId] = useState<number | null>(null);
+  const [deletingScheduleId, setDeletingScheduleId] = useState<number | null>(null);
+
+  const contactSchedules = useMemo(
+    () => paymentSchedules.filter(schedule => schedule.contactId === contact.id),
+    [paymentSchedules, contact.id]
+  );
+
+  const scheduleAggregates = useMemo(() => {
+    const pendingEntries = contactSchedules.flatMap(schedule =>
+      schedule.installments
+        .filter(installment => installment.status === 'pending')
+        .map(installment => ({ scheduleId: schedule.id, installment }))
+    );
+    const overdueEntries = pendingEntries.filter(item => {
+      const dueDate = item.installment.dueDate;
+      return dueDate ? dayjs(dueDate).isBefore(dayjs(), 'day') : false;
+    });
+    const pendingAmount = pendingEntries.reduce(
+      (acc, item) => acc + (item.installment.amount ?? 0),
+      0
+    );
+    return {
+      pending: pendingEntries,
+      overdue: overdueEntries,
+      pendingAmount,
+    };
+  }, [contactSchedules]);
+
+  const handleCreateSchedule = async (payload: Parameters<typeof addPaymentSchedule>[0]) => {
+    setActionError(null);
+    await addPaymentSchedule(payload);
+  };
+
+  const handleDeleteSchedule = async (scheduleId: number) => {
+    const confirmed = window.confirm('Excluir este cronograma de pagamentos? Esta ação não pode ser desfeita.');
+    if (!confirmed) {
+      return;
+    }
+    try {
+      setActionError(null);
+      setDeletingScheduleId(scheduleId);
+      await deletePaymentSchedule(scheduleId);
+    } catch (err) {
+      console.error(err);
+      setActionError('Não foi possível remover o cronograma de pagamentos.');
+    } finally {
+      setDeletingScheduleId(null);
+    }
+  };
+
+  const handleMarkInstallmentPaid = async (installmentId: number) => {
+    const confirmed = window.confirm('Confirmar recebimento desta parcela?');
+    if (!confirmed) {
+      return;
+    }
+    try {
+      setActionError(null);
+      setProcessingInstallmentId(installmentId);
+      await markPaymentInstallmentAsPaid(installmentId, {
+        paidAt: dayjs().format('YYYY-MM-DD'),
+      });
+    } catch (err) {
+      console.error(err);
+      setActionError('Não foi possível marcar a parcela como paga.');
+    } finally {
+      setProcessingInstallmentId(null);
+    }
+  };
+
+  const handleDeleteContact = async () => {
+    const confirmed = window.confirm(
+      `Excluir o contato "${contact.name}" e todos os dados associados?`
+    );
+    if (!confirmed) {
+      return;
+    }
+    try {
+      setActionError(null);
+      setDeleting(true);
+      await deleteContact(contact.id);
+      navigate('/contatos', { replace: true });
+    } catch (err) {
+      console.error(err);
+      setActionError('Não foi possível remover o contato.');
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   return (
     <div className="space-y-8">
@@ -108,6 +215,12 @@ const ContactDetail: React.FC = () => {
                     {formatDocument(contact.document)}
                   </span>
                 )}
+                {scheduleAggregates.pending.length > 0 && (
+                  <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200">
+                    <CalendarDays className="h-3.5 w-3.5" />
+                    {scheduleAggregates.pending.length} parcela(s) pendente(s) — {formatCurrency(scheduleAggregates.pendingAmount)}
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -137,9 +250,31 @@ const ContactDetail: React.FC = () => {
               <Plus className="h-4 w-4" />
               Nova tarefa
             </Button>
+            <Button
+              className="gap-2 bg-emerald-500 text-white shadow-sm hover:brightness-105 dark:bg-emerald-600"
+              onClick={() => setScheduleModalOpen(true)}
+            >
+              <CalendarDays className="h-4 w-4" />
+              Agendar recebimento
+            </Button>
+            <Button
+              variant="destructive"
+              className="gap-2"
+              onClick={handleDeleteContact}
+              disabled={deleting}
+            >
+              {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+              {deleting ? 'Excluindo...' : 'Excluir contato'}
+            </Button>
           </div>
         </div>
       </section>
+
+      {actionError && (
+        <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-200">
+          {actionError}
+        </p>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <div className="rounded-2xl border border-border/60 bg-white/70 p-4 shadow-sm dark:border-dark-border/60 dark:bg-dark-card/70">
@@ -199,6 +334,187 @@ const ContactDetail: React.FC = () => {
           </span>
         </div>
       </div>
+
+      <Card className="rounded-2xl border border-border/60 shadow-sm dark:border-dark-border/60 dark:bg-dark-card/80">
+        <CardHeader className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <CardTitle className="text-base font-semibold">Recebimentos programados</CardTitle>
+            <p className="text-xs text-muted-foreground">
+              Acompanhe parcelas futuras e confirme quando o cliente efetuar o pagamento.
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            className="gap-2 border-emerald-400 text-emerald-600 hover:bg-emerald-50 dark:border-emerald-500/40 dark:text-emerald-300 dark:hover:bg-emerald-500/15"
+            onClick={() => setScheduleModalOpen(true)}
+          >
+            <CalendarDays className="h-4 w-4" />
+            Agendar recebimento
+          </Button>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {contactSchedules.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-border/60 bg-muted/20 px-5 py-8 text-center text-sm text-muted-foreground dark:border-dark-border/40 dark:bg-dark-card/60">
+              <p>Este contato ainda não possui parcelas futuras cadastradas.</p>
+              <Button
+                size="sm"
+                className="mt-3 gap-2 bg-emerald-500 text-white hover:brightness-105 dark:bg-emerald-600"
+                onClick={() => setScheduleModalOpen(true)}
+              >
+                <CalendarDays className="h-4 w-4" />
+                Criar cronograma
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {contactSchedules.map(schedule => {
+                const paidCount = schedule.installments.filter(installment => installment.status === 'paid').length;
+                const pendingCount = schedule.installments.length - paidCount;
+                const overdueCount = schedule.installments.filter(
+                  installment =>
+                    installment.status === 'pending' &&
+                    installment.dueDate &&
+                    dayjs(installment.dueDate).isBefore(dayjs(), 'day')
+                ).length;
+                const totalReceived = schedule.installments
+                  .filter(installment => installment.status === 'paid')
+                  .reduce((acc, installment) => acc + (installment.amount ?? 0), 0);
+                const nextPending = schedule.installments
+                  .filter(installment => installment.status === 'pending')
+                  .sort((a, b) => {
+                    return dayjs(a.dueDate).valueOf() - dayjs(b.dueDate).valueOf();
+                  })[0];
+
+                const title = schedule.title || `Cronograma ${dayjs(schedule.createdAt ?? schedule.firstDueDate ?? new Date()).format('DD/MM/YYYY')}`;
+
+                return (
+                  <div
+                    key={schedule.id}
+                    className="rounded-xl border border-border/50 bg-white/90 p-4 dark:border-dark-border/50 dark:bg-dark-card/70"
+                  >
+                    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                      <div className="space-y-1">
+                        <h3 className="text-sm font-semibold text-foreground dark:text-dark-foreground">
+                          {title}
+                        </h3>
+                        <p className="text-xs text-muted-foreground">
+                          {schedule.installmentsCount} parcela(s) — {formatCurrency(schedule.totalAmount)} · Recebido {formatCurrency(totalReceived)}
+                        </p>
+                        {schedule.notes && (
+                          <p className="text-xs text-muted-foreground">{schedule.notes}</p>
+                        )}
+                        {nextPending && (
+                          <p className="text-xs text-muted-foreground">
+                            Próximo vencimento: {nextPending.dueDate ? formatDate(nextPending.dueDate) : '—'}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary dark:bg-dark-primary/15 dark:text-dark-primary">
+                          {paidCount}/{schedule.installmentsCount} pagas
+                        </span>
+                        {overdueCount > 0 && (
+                          <span className="inline-flex items-center rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-600 dark:bg-red-500/15 dark:text-red-200">
+                            {overdueCount} em atraso
+                          </span>
+                        )}
+                        {pendingCount > 0 && (
+                          <span className="inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700 dark:bg-amber-500/15 dark:text-amber-200">
+                            {pendingCount} pendente(s)
+                          </span>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="gap-2 text-red-500 hover:text-red-600 dark:text-red-300"
+                          onClick={() => handleDeleteSchedule(schedule.id)}
+                          disabled={deletingScheduleId === schedule.id}
+                        >
+                          {deletingScheduleId === schedule.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
+                          Excluir plano
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="mt-3 overflow-x-auto">
+                      <div className="hidden grid-cols-[0.8fr,0.6fr,0.8fr,0.5fr] rounded-lg bg-muted/40 px-3 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground dark:bg-dark-card/60 md:grid">
+                        <span>Parcela</span>
+                        <span>Vencimento</span>
+                        <span>Status</span>
+                        <span>Valor</span>
+                      </div>
+                      <div className="space-y-2">
+                        {schedule.installments.map(installment => {
+                          const isOverdue =
+                            installment.status === 'pending' &&
+                            installment.dueDate &&
+                            dayjs(installment.dueDate).isBefore(dayjs(), 'day');
+                          const isProcessing = processingInstallmentId === installment.id;
+                          return (
+                            <div
+                              key={installment.id}
+                              className="grid gap-3 rounded-lg border border-border/40 bg-card/80 px-3 py-2 text-sm dark:border-dark-border/40 dark:bg-dark-card/60 md:grid-cols-[0.8fr,0.6fr,0.8fr,0.5fr]"
+                            >
+                              <span className="font-medium text-foreground dark:text-dark-foreground">
+                                Parcela #{installment.sequence}
+                              </span>
+                              <span
+                                className={`font-medium ${
+                                  isOverdue ? 'text-red-600 dark:text-red-200' : 'text-foreground dark:text-dark-foreground'
+                                }`}
+                              >
+                                {installment.dueDate ? formatDate(installment.dueDate) : 'Sem data'}
+                              </span>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span
+                                  className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
+                                    installment.status === 'paid'
+                                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200'
+                                      : isOverdue
+                                      ? 'bg-red-100 text-red-600 dark:bg-red-500/15 dark:text-red-200'
+                                      : 'bg-primary/10 text-primary dark:bg-dark-primary/15 dark:text-dark-primary'
+                                  }`}
+                                >
+                                  {installment.status === 'paid'
+                                    ? `Paga em ${installment.paidAt ? formatDate(installment.paidAt) : ''}`
+                                    : isOverdue
+                                    ? 'Em atraso'
+                                    : 'Pendente'}
+                                </span>
+                                {installment.status === 'pending' && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-emerald-600 hover:text-emerald-700 dark:text-emerald-300"
+                                    onClick={() => handleMarkInstallmentPaid(installment.id)}
+                                    disabled={isProcessing}
+                                  >
+                                    {isProcessing ? (
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      'Marcar como pago'
+                                    )}
+                                  </Button>
+                                )}
+                              </div>
+                              <span className="font-semibold text-foreground dark:text-dark-foreground">
+                                {formatCurrency(installment.amount ?? 0)}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {(contact.notes || (contact.mentions && contact.mentions.length > 0)) && (
         <Card className="border border-border/60 shadow-sm dark:border-dark-border/60 dark:bg-dark-card/80">
@@ -425,6 +741,13 @@ const ContactDetail: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+
+      <PaymentScheduleModal
+        open={isScheduleModalOpen}
+        onClose={() => setScheduleModalOpen(false)}
+        contact={contact}
+        onCreate={handleCreateSchedule}
+      />
     </div>
   );
 };

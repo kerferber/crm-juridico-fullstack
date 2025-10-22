@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import React, { useMemo, useState } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 import {
   Briefcase,
@@ -17,6 +17,7 @@ import {
   AlertTriangle,
   Gavel,
   ExternalLink,
+  Trash2,
 } from 'lucide-react';
 import { useApp } from '../store/AppContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
@@ -43,7 +44,10 @@ const AREA_COLORS: Record<string, string> = {
 
 const LawsuitDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const { lawsuits, contacts, users, tasks } = useApp();
+  const { lawsuits, contacts, users, tasks, deleteLawsuit } = useApp();
+  const navigate = useNavigate();
+  const [deleting, setDeleting] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
   const { openForCreate: openTaskModal } = useTaskModal();
   const lawsuitId = Number.parseInt(id || '0', 10);
   const lawsuit = lawsuits.find(l => l.id === lawsuitId);
@@ -111,6 +115,27 @@ const LawsuitDetail: React.FC = () => {
   }, [lawsuit.deadline, lawsuit.internalNumber, lawsuitTasks, users]);
 
   const isOverdue = lawsuit.deadline ? dayjs().isAfter(dayjs(lawsuit.deadline), 'day') : false;
+
+  const handleDelete = async () => {
+    const confirmed = window.confirm(
+      `Excluir o processo "${lawsuit.internalNumber}"? Esta ação não pode ser desfeita.`
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setActionError(null);
+      setDeleting(true);
+      await deleteLawsuit(lawsuit.id);
+      navigate('/processos', { replace: true });
+    } catch (err) {
+      console.error(err);
+      setActionError('Não foi possível excluir o processo. Tente novamente mais tarde.');
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   return (
     <div className="space-y-8">
@@ -213,9 +238,24 @@ const LawsuitDetail: React.FC = () => {
               <Sparkles className="h-4 w-4" />
               Automatizar fluxo
             </Button>
+            <Button
+              variant="destructive"
+              className="gap-2"
+              onClick={handleDelete}
+              disabled={deleting}
+            >
+              <Trash2 className="h-4 w-4" />
+              {deleting ? 'Excluindo...' : 'Excluir processo'}
+            </Button>
           </div>
         </div>
       </section>
+
+      {actionError && (
+        <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-200">
+          {actionError}
+        </p>
+      )}
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Card className="border border-primary/40 bg-primary/5 shadow-sm dark:border-dark-primary/40 dark:bg-dark-primary/10">

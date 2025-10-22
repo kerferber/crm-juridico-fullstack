@@ -42,6 +42,9 @@ import {
   GoalPeriodicity,
   GoalOwnerType,
   GoalNotificationTrigger,
+  PaymentSchedule,
+  PaymentInstallment,
+  PaymentScheduleInput,
 } from '../types/types';
 import dayjs from 'dayjs';
 import { ApiError, apiClient, isUsingMockApi } from '../services/api';
@@ -120,6 +123,13 @@ const ensureOptionalNumber = (value: any): number | undefined => {
 const optionalString = (value: any): string | undefined => {
   const normalized = ensureString(value);
   return normalized ? normalized : undefined;
+};
+
+type MarkInstallmentPayload = {
+  paidAt?: string;
+  description?: string;
+  category?: string;
+  account?: string;
 };
 
 const extractMessageFromPayload = (payload: unknown): string => {
@@ -1011,6 +1021,45 @@ const mapTransactionFromApi = (raw: any): Transaction => ({
   categoryId: optionalString(raw?.categoryId ?? raw?.category_id),
 });
 
+const mapPaymentInstallmentFromApi = (raw: any): PaymentInstallment => ({
+  id: ensureNumber(raw?.id),
+  paymentScheduleId: ensureNumber(raw?.payment_schedule_id ?? raw?.paymentScheduleId),
+  sequence: ensureNumber(raw?.sequence),
+  dueDate: optionalString(raw?.due_date ?? raw?.dueDate) ?? null,
+  amount: Number.parseFloat(String(raw?.amount ?? 0)) || 0,
+  status: ensureString(raw?.status, 'pending') as PaymentInstallment['status'],
+  paidAt: optionalString(raw?.paid_at ?? raw?.paidAt),
+  transactionId: ensureOptionalNumber(raw?.transaction_id ?? raw?.transactionId),
+  createdAt: optionalString(raw?.created_at ?? raw?.createdAt),
+  updatedAt: optionalString(raw?.updated_at ?? raw?.updatedAt),
+});
+
+const mapPaymentScheduleFromApi = (raw: any): PaymentSchedule => ({
+  id: ensureNumber(raw?.id),
+  tenantId: ensureNumber(raw?.tenant_id ?? raw?.tenantId),
+  contactId: ensureNumber(raw?.contact_id ?? raw?.contactId),
+  title: optionalString(raw?.title) ?? null,
+  notes: optionalString(raw?.notes),
+  totalAmount: Number.parseFloat(String(raw?.total_amount ?? raw?.totalAmount ?? 0)) || 0,
+  installmentsCount: ensureNumber(raw?.installments_count ?? raw?.installmentsCount),
+  installmentAmount: Number.parseFloat(String(raw?.installment_amount ?? raw?.installmentAmount ?? 0)) || 0,
+  firstDueDate: optionalString(raw?.first_due_date ?? raw?.firstDueDate),
+  createdAt: optionalString(raw?.created_at ?? raw?.createdAt),
+  updatedAt: optionalString(raw?.updated_at ?? raw?.updatedAt),
+  contact:
+    raw?.contact && typeof raw.contact === 'object'
+      ? {
+          id: ensureNumber(raw.contact.id),
+          name: ensureString(raw.contact.name),
+          email: optionalString(raw.contact.email),
+          phone: optionalString(raw.contact.phone),
+        }
+      : null,
+  installments: Array.isArray(raw?.installments)
+    ? raw.installments.map(mapPaymentInstallmentFromApi)
+    : [],
+});
+
 const mapKanbanCardFromLawsuit = (raw: any): KanbanCard => {
   const column = normalizeKanbanColumn(raw?.kanbanColumn ?? raw?.kanban_column);
   const deadline = ensureString(raw?.deadline ?? raw?.deadline_at);
@@ -1572,6 +1621,7 @@ interface AppContextType {
   kanbanCards: KanbanCard[];
   calendarEvents: CalendarEvent[];
   transactions: Transaction[];
+  paymentSchedules: PaymentSchedule[];
   goalPrograms: GoalProgram[];
   goals: Goal[];
   goalAssignments: GoalAssignment[];
@@ -1604,6 +1654,7 @@ interface AppContextType {
     notes?: string;
     mentions?: MentionReference[];
   }) => Promise<Contact>;
+  deleteContact: (contactId: number) => Promise<void>;
   createCollaborator: (data: {
     name: string;
     email: string;
@@ -1636,6 +1687,10 @@ interface AppContextType {
     notes?: string;
     mentions?: MentionReference[];
   }) => Promise<Lawsuit>;
+  deleteLawsuit: (lawsuitId: number) => Promise<void>;
+  addPaymentSchedule: (data: PaymentScheduleInput) => Promise<PaymentSchedule>;
+  deletePaymentSchedule: (scheduleId: number) => Promise<void>;
+  markPaymentInstallmentAsPaid: (installmentId: number, payload?: MarkInstallmentPayload) => Promise<void>;
   addTransaction: (data: {
     date: string;
     description: string;
@@ -1721,6 +1776,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   const [kanbanCards, setKanbanCards] = useState<KanbanCard[]>([]);
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [paymentSchedules, setPaymentSchedules] = useState<PaymentSchedule[]>([]);
   const [goalPrograms, setGoalPrograms] = useState<GoalProgram[]>(() => {
     const stored = loadStoredGoalPrograms();
     return stored ?? cloneGoalPrograms(GOAL_PROGRAMS);
@@ -2247,6 +2303,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
           tasksRaw,
           calendarRaw,
           transactionsRaw,
+          paymentSchedulesRaw,
           kanbanRaw,
           goalProgramsRaw,
           goalsRaw,
@@ -2260,6 +2317,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
           apiClient.get('/tasks'),
           apiClient.get('/calendar-events'),
           apiClient.get('/transactions'),
+          isUsingMockApi ? Promise.resolve([]) : apiClient.get('/payment-schedules'),
           isUsingMockApi ? apiClient.get('/kanban-cards') : Promise.resolve(null),
           isUsingMockApi ? fetchOptionalCollection('/goal-programs') : Promise.resolve(null),
           isUsingMockApi ? fetchOptionalCollection('/goals') : Promise.resolve(null),
@@ -2277,6 +2335,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
         applyTasksPayload(tasksRaw);
         setCalendarEvents(toArray<any>(calendarRaw).map(mapCalendarEventFromApi));
         setTransactions(toArray<any>(transactionsRaw).map(mapTransactionFromApi));
+        setPaymentSchedules(toArray<any>(paymentSchedulesRaw).map(mapPaymentScheduleFromApi));
         setKanbanCards(
           isUsingMockApi
             ? toArray<any>(kanbanRaw).map(mapKanbanCardFromMock)
@@ -2990,6 +3049,30 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  const deleteContact = async (contactId: number): Promise<void> => {
+    try {
+      if (!isUsingMockApi) {
+        await apiClient.delete(`/contacts/${contactId}`);
+      }
+      setContacts(prev => prev.filter(contact => contact.id !== contactId));
+      setContactAnnotations(prev => {
+        if (!prev[contactId]) {
+          return prev;
+        }
+        const next = { ...prev };
+        delete next[contactId];
+        persistAnnotationCache(CONTACT_NOTES_STORAGE_KEY, next);
+        return next;
+      });
+      setPaymentSchedules(prev => prev.filter(schedule => schedule.contactId !== contactId));
+      setError(null);
+    } catch (err) {
+      console.error(err);
+      setError('Não foi possível remover o contato.');
+      throw err;
+    }
+  };
+
   const createCollaborator = async (data: {
     name: string;
     email: string;
@@ -3214,6 +3297,195 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     } catch (err) {
       console.error(err);
       setError('Não foi possível criar o processo no backend.');
+      throw err;
+    }
+  };
+
+  const deleteLawsuit = async (lawsuitId: number): Promise<void> => {
+    try {
+      if (!isUsingMockApi) {
+        await apiClient.delete(`/lawsuits/${lawsuitId}`);
+      }
+      setLawsuits(prev => prev.filter(lawsuit => lawsuit.id !== lawsuitId));
+      setKanbanCards(prev => prev.filter(card => card.id !== `lawsuit-${lawsuitId}`));
+      setTasks(prev =>
+        prev.map(task =>
+          task.lawsuitId === lawsuitId ? { ...task, lawsuitId: undefined } : task
+        )
+      );
+      setLawsuitAnnotations(prev => {
+        if (!prev[lawsuitId]) {
+          return prev;
+        }
+        const next = { ...prev };
+        delete next[lawsuitId];
+        persistAnnotationCache(LAWSUIT_NOTES_STORAGE_KEY, next);
+        return next;
+      });
+      setError(null);
+    } catch (err) {
+      console.error(err);
+      setError('Não foi possível remover o processo.');
+      throw err;
+    }
+  };
+
+  const addPaymentSchedule = async (payload: PaymentScheduleInput): Promise<PaymentSchedule> => {
+    try {
+      if (isUsingMockApi) {
+        const scheduleId = Date.now();
+        const installments = payload.installments.map((installment, index) => ({
+          id: scheduleId + index + 1,
+          paymentScheduleId: scheduleId,
+          sequence: index + 1,
+          dueDate: installment.dueDate,
+          amount: installment.amount,
+          status: 'pending' as PaymentInstallment['status'],
+          paidAt: null,
+          transactionId: undefined,
+        }));
+        const contactInfo = contacts.find(contact => contact.id === payload.contactId);
+
+        const schedule: PaymentSchedule = {
+          id: scheduleId,
+          tenantId: 0,
+          contactId: payload.contactId,
+          title: payload.title ?? null,
+          notes: payload.notes,
+          totalAmount: payload.totalAmount,
+          installmentsCount: payload.installmentsCount,
+          installmentAmount: payload.installmentAmount,
+          firstDueDate: payload.firstDueDate ?? (installments[0]?.dueDate ?? null),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          contact: contactInfo
+            ? {
+                id: contactInfo.id,
+                name: contactInfo.name,
+                email: contactInfo.email,
+                phone: contactInfo.phone,
+              }
+            : null,
+          installments,
+        };
+
+        setPaymentSchedules(prev => [...prev, schedule]);
+        return schedule;
+      }
+
+      const response = await apiClient.post('/payment-schedules', {
+        contact_id: payload.contactId,
+        title: payload.title ?? null,
+        notes: payload.notes ?? null,
+        total_amount: payload.totalAmount,
+        installments_count: payload.installmentsCount,
+        installment_amount: payload.installmentAmount,
+        first_due_date: payload.firstDueDate ?? null,
+        installments: payload.installments.map(installment => ({
+          id: installment.id,
+          due_date: installment.dueDate,
+          amount: installment.amount,
+        })),
+      });
+
+      const mapped = mapPaymentScheduleFromApi(response);
+      setPaymentSchedules(prev => [...prev, mapped]);
+      return mapped;
+    } catch (err) {
+      console.error(err);
+      setError('Não foi possível cadastrar o cronograma de pagamentos.');
+      throw err;
+    }
+  };
+
+  const deletePaymentSchedule = async (scheduleId: number): Promise<void> => {
+    try {
+      if (!isUsingMockApi) {
+        await apiClient.delete(`/payment-schedules/${scheduleId}`);
+      }
+      setPaymentSchedules(prev => prev.filter(schedule => schedule.id !== scheduleId));
+    } catch (err) {
+      console.error(err);
+      setError('Não foi possível remover o cronograma de pagamentos.');
+      throw err;
+    }
+  };
+
+  const markPaymentInstallmentAsPaid = async (
+    installmentId: number,
+    payload: MarkInstallmentPayload = {}
+  ): Promise<void> => {
+    try {
+      if (isUsingMockApi) {
+        const paidAt = payload.paidAt ?? new Date().toISOString().slice(0, 10);
+        setPaymentSchedules(prev =>
+          prev.map(schedule => ({
+            ...schedule,
+            installments: schedule.installments.map(installment =>
+              installment.id === installmentId
+                ? {
+                    ...installment,
+                    status: 'paid',
+                    paidAt,
+                  }
+                : installment
+            ),
+          }))
+        );
+        setTransactions(prev => [
+          ...prev,
+          {
+            id: Date.now(),
+            date: paidAt,
+            description: payload.description ?? 'Recebimento de parcela',
+            category: payload.category ?? 'Receitas recorrentes',
+            account: payload.account ?? 'Contas a receber',
+            value:
+              paymentSchedules
+                .flatMap(schedule => schedule.installments)
+                .find(installment => installment.id === installmentId)?.amount ?? 0,
+            type: TransactionType.Receita,
+            categoryId: undefined,
+          },
+        ]);
+        return;
+      }
+
+      const response = await apiClient.post<{ installment: any; transaction?: any }>(
+        `/payment-installments/${installmentId}/mark-paid`,
+        {
+          paid_at: payload.paidAt,
+          description: payload.description,
+          category: payload.category,
+          account: payload.account,
+        }
+      );
+
+      const updatedInstallment = mapPaymentInstallmentFromApi(response.installment);
+      setPaymentSchedules(prev =>
+        prev.map(schedule => {
+          if (schedule.id !== updatedInstallment.paymentScheduleId) {
+            return schedule;
+          }
+          return {
+            ...schedule,
+            installments: schedule.installments.map(installment =>
+              installment.id === updatedInstallment.id ? updatedInstallment : installment
+            ),
+          };
+        })
+      );
+
+      if (response.transaction) {
+        const mappedTransaction = mapTransactionFromApi(response.transaction);
+        setTransactions(prev => {
+          const exists = prev.some(transaction => transaction.id === mappedTransaction.id);
+          return exists ? prev : [...prev, mappedTransaction];
+        });
+      }
+    } catch (err) {
+      console.error(err);
+      setError('Não foi possível registrar o pagamento desta parcela.');
       throw err;
     }
   };
@@ -4147,6 +4419,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     kanbanCards,
     calendarEvents,
     transactions,
+    paymentSchedules,
     goalPrograms,
     goals,
     goalAssignments,
@@ -4165,11 +4438,16 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     addTask,
     addKanbanCard,
     addContact,
+    deleteContact,
     createCollaborator,
     updateCollaborator,
     deleteCollaborator,
     updateUserCache,
     addLawsuit,
+    deleteLawsuit,
+    addPaymentSchedule,
+    deletePaymentSchedule,
+    markPaymentInstallmentAsPaid,
     addTransaction,
     createGoalProgram,
     updateGoalProgram,

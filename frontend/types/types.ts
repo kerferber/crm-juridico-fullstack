@@ -140,6 +140,54 @@ export interface Transaction {
     categoryId?: string;
 }
 
+export type PaymentInstallmentStatus = 'pending' | 'paid';
+
+export interface PaymentScheduleInstallmentInput {
+  id?: number;
+  dueDate: string;
+  amount: number;
+}
+
+export interface PaymentScheduleInput {
+  contactId: number;
+  title?: string | null;
+  notes?: string | null;
+  totalAmount: number;
+  installmentsCount: number;
+  installmentAmount: number;
+  firstDueDate?: string | null;
+  installments: PaymentScheduleInstallmentInput[];
+}
+
+export interface PaymentInstallment {
+  id: number;
+  paymentScheduleId: number;
+  sequence: number;
+  dueDate: string | null;
+  amount: number;
+  status: PaymentInstallmentStatus;
+  paidAt?: string | null;
+  transactionId?: number | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface PaymentSchedule {
+  id: number;
+  tenantId: number;
+  contactId: number;
+  title?: string | null;
+  notes?: string | null;
+  totalAmount: number;
+  installmentsCount: number;
+  installmentAmount: number;
+  firstDueDate?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+  contact?: Pick<Contact, 'id' | 'name' | 'email' | 'phone'> | null;
+  installments: PaymentInstallment[];
+}
+
 export type MentionTargetType = 'user' | 'contact';
 
 export interface MentionReference {

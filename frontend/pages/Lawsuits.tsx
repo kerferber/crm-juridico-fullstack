@@ -14,6 +14,7 @@ import {
   User,
   CalendarDays,
   ClipboardList,
+  Trash2,
 } from 'lucide-react';
 import { useProcessModal } from '../hooks/useProcessModal';
 import { useTaskModal } from '../hooks/useTaskModal';
@@ -33,7 +34,7 @@ const AREA_COLORS: Record<string, string> = {
 };
 
 const Lawsuits: React.FC = () => {
-  const { lawsuits, contacts, users, tasks } = useApp();
+  const { lawsuits, contacts, users, tasks, deleteLawsuit } = useApp();
   const { open: openProcessModal } = useProcessModal();
   const { openForCreate: openTaskModal } = useTaskModal();
 
@@ -41,6 +42,8 @@ const Lawsuits: React.FC = () => {
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [selectedArea, setSelectedArea] = useState('all');
   const [selectedResponsible, setSelectedResponsible] = useState('all');
+  const [deletingLawsuitId, setDeletingLawsuitId] = useState<number | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const activeCount = lawsuits.filter(l => l.status === 'Ativo').length;
   const closedCount = lawsuits.filter(l => l.status === 'Fechado').length;
@@ -68,6 +71,26 @@ const Lawsuits: React.FC = () => {
       return matchesSearch && matchesStatus && matchesArea && matchesResponsible;
     });
   }, [lawsuits, searchTerm, selectedStatus, selectedArea, selectedResponsible]);
+
+  const handleDeleteLawsuit = async (target: typeof filteredLawsuits[number]) => {
+    const confirmed = window.confirm(
+      `Excluir o processo "${target.internalNumber}"? Esta ação não pode ser desfeita.`
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setActionError(null);
+      setDeletingLawsuitId(target.id);
+      await deleteLawsuit(target.id);
+    } catch (err) {
+      console.error(err);
+      setActionError('Não foi possível excluir o processo selecionado.');
+    } finally {
+      setDeletingLawsuitId(null);
+    }
+  };
 
   return (
     <div className="space-y-8">
@@ -205,6 +228,11 @@ const Lawsuits: React.FC = () => {
         </div>
 
         <div className="mt-8 overflow-hidden rounded-2xl border border-border/60 bg-white dark:border-dark-border/60 dark:bg-dark-card/80">
+          {actionError && (
+            <p className="mx-4 mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-200">
+              {actionError}
+            </p>
+          )}
           <div className="hidden grid-cols-[minmax(220px,1fr),minmax(180px,0.8fr),minmax(160px,0.7fr),minmax(200px,0.8fr),120px] border-b border-border/60 bg-muted/30 px-6 py-3 text-[11px] font-semibold uppercase tracking-[0.3em] text-muted-foreground dark:border-dark-border/60 dark:bg-dark-card/70 md:grid">
             <span>Processo</span>
             <span>Cliente & Área</span>
@@ -342,6 +370,16 @@ const Lawsuits: React.FC = () => {
                     }
                   >
                     <Briefcase className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 rounded-lg border border-red-200 text-red-600 hover:border-red-400 hover:bg-red-50 dark:border-red-500/40 dark:text-red-300 dark:hover:border-red-400 dark:hover:bg-red-500/15"
+                    title="Excluir processo"
+                    onClick={() => handleDeleteLawsuit(lawsuit)}
+                    disabled={deletingLawsuitId === lawsuit.id}
+                  >
+                    <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
