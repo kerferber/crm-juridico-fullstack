@@ -1,6 +1,7 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import dayjs from 'dayjs';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
+import { Button } from '../components/ui/Button';
 import { useApp } from '../store/AppContext';
 import { getGoalProgressPercentage } from '../lib/goal-utils';
 import { formatCurrency } from '../lib/utils';
@@ -29,8 +30,14 @@ const describeCurrencyDelta = (current: number, previous: number) => {
   return `${formatCurrency(current)} (${formattedDelta})`;
 };
 
+const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
+const OPENAI_API_KEY = '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';
+
 const Insights: React.FC = () => {
   const { contacts, lawsuits, tasks, users, goals, transactions, goalPrograms } = useApp();
+  const [generating, setGenerating] = useState(false);
+  const [insights, setInsights] = useState<string | null>(null);
+  const [generationError, setGenerationError] = useState<string | null>(null);
 
   const query = useMemo(() => {
     const now = dayjs();
@@ -217,6 +224,85 @@ const Insights: React.FC = () => {
             onFocus={event => event.currentTarget.select()}
             spellCheck={false}
           />
+        </CardContent>
+      </Card>
+
+      <Card className="border border-border/60 shadow-sm dark:border-dark-border/60">
+        <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <CardTitle>Gerar insights com OpenAI</CardTitle>
+          <Button
+            type="button"
+            onClick={async () => {
+              setGenerationError(null);
+              setInsights(null);
+              setGenerating(true);
+              try {
+                const prompt = `Você é analista de dados senior e especialista em gestão e produtividade de escritórios de advocacia. Analise as informações abaixo e gere de forma direta e resumida 5 insights para o dono do escritório, 3 insights nominais para cada colaborador, e 3 insights gerais para os colaboradores:\n\n${query}`;
+
+                const response = await fetch(OPENAI_API_URL, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${OPENAI_API_KEY}`,
+                  },
+                  body: JSON.stringify({
+                    model: 'gpt-5-2025-08-07',
+                    messages: [
+                      { role: 'user', content: prompt },
+                    ],
+                  }),
+                });
+
+                if (!response.ok) {
+                  const errorPayload = await response.json().catch(() => ({}));
+                  throw new Error(errorPayload?.error?.message ?? 'Falha ao gerar insights.');
+                }
+
+                const data = await response.json();
+                const content = data?.choices?.[0]?.message?.content?.trim();
+                if (!content) {
+                  throw new Error('Resposta inesperada da OpenAI.');
+                }
+                setInsights(content);
+              } catch (err) {
+                if (err instanceof Error) {
+                  setGenerationError(err.message);
+                } else {
+                  setGenerationError('Não foi possível obter insights agora.');
+                }
+              } finally {
+                setGenerating(false);
+              }
+            }}
+            disabled={generating}
+            className="w-full sm:w-auto"
+          >
+            {generating ? 'Gerando...' : 'Gerar insights'}
+          </Button>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {generating && (
+            <p className="text-sm text-muted-foreground">
+              Consultando o modelo gpt5... aguarde alguns instantes.
+            </p>
+          )}
+          {generationError && (
+            <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-200">
+              {generationError}
+            </p>
+          )}
+          {insights && (
+            <textarea
+              readOnly
+              value={insights}
+              className="h-[320px] w-full resize-none rounded-lg border border-border/60 bg-muted/10 p-4 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-dark-border/60 dark:bg-dark-card/80 dark:text-dark-foreground"
+            />
+          )}
+          {!generating && !generationError && !insights && (
+            <p className="text-xs text-muted-foreground">
+              Clique em “Gerar insights” para obter recomendações automáticas diretamente aqui no painel.
+            </p>
+          )}
         </CardContent>
       </Card>
     </div>
