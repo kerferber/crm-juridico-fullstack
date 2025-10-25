@@ -63,8 +63,25 @@ const MentionTextarea: React.FC<MentionTextareaProps> = ({
   const [caretPosition, setCaretPosition] = useState(0);
 
   useEffect(() => {
-    setMentions(initialMentions ?? []);
-  }, [initialMentions]);
+    const normalized = Array.isArray(initialMentions) ? initialMentions : [];
+    setMentions(prev => {
+      if (prev.length === normalized.length) {
+        const unchanged = prev.every((item, index) => {
+          const other = normalized[index];
+          return (
+            other &&
+            item.id === other.id &&
+            item.kind === other.kind &&
+            item.label === other.label
+          );
+        });
+        if (unchanged) {
+          return prev;
+        }
+      }
+      return normalized;
+    });
+  }, [JSON.stringify(initialMentions ?? [])]);
 
   useEffect(() => {
     onMentionsChange?.(mentions);

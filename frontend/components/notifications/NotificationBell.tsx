@@ -11,7 +11,7 @@ import { cn } from '../../lib/utils';
 const MAX_IN_MODAL = 10;
 
 const NotificationBell: React.FC = () => {
-  const { notifications, markNotificationAsRead } = useApp();
+  const { notifications, markNotificationAsRead, markAllNotificationsAsRead } = useApp();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
@@ -45,7 +45,11 @@ const NotificationBell: React.FC = () => {
 
   const toggle = () => {
     if (!user) return;
-    setIsOpen(prev => !prev);
+    const nextState = !isOpen;
+    setIsOpen(nextState);
+    if (nextState && unreadCount > 0) {
+      markAllNotificationsAsRead(user.id);
+    }
   };
 
   const handleNavigation = (notification: NotificationItem) => {

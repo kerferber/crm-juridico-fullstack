@@ -17,14 +17,18 @@ class Task extends Model
         'due_date',
         'deadline',
         'score',
+        'category_id',
         'responsible_id',
         'lawsuit_id',
         'client_id',
+        'notes',
+        'mentions',
     ];
 
     protected $casts = [
         'due_date' => 'date',
         'deadline' => 'date',
+        'mentions' => 'array',
     ];
 
     public function responsible()

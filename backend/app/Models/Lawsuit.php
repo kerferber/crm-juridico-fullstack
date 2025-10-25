@@ -20,10 +20,13 @@ class Lawsuit extends Model
         'responsible_id',
         'kanban_column',
         'kanban_phase',
+        'notes',
+        'mentions',
     ];
 
     protected $casts = [
         'deadline' => 'date',
+        'mentions' => 'array',
     ];
 
     public function client()

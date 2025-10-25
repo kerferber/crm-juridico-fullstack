@@ -2,7 +2,11 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Events\TransactionCreated;
+use App\Events\TransactionDeleted;
+use App\Events\TransactionUpdated;
 use App\Http\Controllers\Controller;
+use App\Http\Resources\TransactionResource;
 use App\Models\Transaction;
 use Illuminate\Http\Request;
 
@@ -44,7 +48,11 @@ class TransactionController extends Controller
 
         $transaction = Transaction::create($data);
 
-        return response()->json($transaction, 201);
+        TransactionCreated::dispatch($transaction);
+
+        return TransactionResource::make($transaction)
+            ->response()
+            ->setStatusCode(201);
     }
 
     public function show(Request $request, $id)
@@ -71,7 +79,9 @@ class TransactionController extends Controller
 
         $transaction->update($data);
 
-        return $transaction;
+        TransactionUpdated::dispatch($transaction);
+
+        return TransactionResource::make($transaction);
     }
 
     public function destroy(Request $request, $id)
@@ -79,7 +89,10 @@ class TransactionController extends Controller
         $tenantId = $this->ensureTenantId($request);
 
         $transaction = Transaction::where('tenant_id', $tenantId)->findOrFail($id);
+        $transactionId = (int) $transaction->id;
         $transaction->delete();
+
+        TransactionDeleted::dispatch($tenantId, $transactionId);
 
         return response()->noContent();
     }

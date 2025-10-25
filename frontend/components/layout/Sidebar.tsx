@@ -16,6 +16,7 @@ import {
   X,
   Sparkles,
   CalendarDays,
+  MessageCircle,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
@@ -40,6 +41,7 @@ const NAV_SECTIONS: { id: string; title: string; items: NavItem[] }[] = [
       { to: '/', label: 'Página inicial', icon: Home, accentClass: 'bg-primary/90', exact: true },
       { to: '/tarefas', label: 'Minhas tarefas', icon: CheckSquare, accentClass: 'bg-emerald-500' },
       { to: '/notificacoes', label: 'Caixa de entrada', icon: Inbox, accentClass: 'bg-sky-500' },
+      { to: '/social', label: 'Feed interno', icon: MessageCircle, accentClass: 'bg-rose-500' },
     ],
   },
   {

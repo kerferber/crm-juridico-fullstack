@@ -20,10 +20,13 @@ class Contact extends Model
         'profession',
         'owner_id',
         'last_interaction',
+        'notes',
+        'mentions',
     ];
 
     protected $casts = [
         'last_interaction' => 'datetime',
+        'mentions' => 'array',
     ];
 
     public function owner()

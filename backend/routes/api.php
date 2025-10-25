@@ -17,6 +17,8 @@ use App\Http\Controllers\Api\V1\TenantController;
 use App\Http\Controllers\Api\V1\AiSettingsController;
 use App\Http\Controllers\Api\V1\PaymentScheduleController;
 use App\Http\Controllers\Api\V1\PaymentInstallmentController;
+use App\Http\Controllers\Api\V1\SocialPostController;
+use App\Http\Controllers\Api\V1\NotificationController;
 
 Route::prefix('admin')->group(function () {
     Route::post('login', [AdminAuthController::class, 'login']);
@@ -58,6 +60,16 @@ $registerProtectedRoutes = function () {
     Route::put('payment-schedules/{paymentSchedule}', [PaymentScheduleController::class, 'update']);
     Route::delete('payment-schedules/{paymentSchedule}', [PaymentScheduleController::class, 'destroy']);
     Route::post('payment-installments/{paymentInstallment}/mark-paid', [PaymentInstallmentController::class, 'markPaid']);
+    Route::get('social/posts', [SocialPostController::class, 'index']);
+    Route::post('social/posts', [SocialPostController::class, 'store']);
+    Route::delete('social/posts/{post}', [SocialPostController::class, 'destroy']);
+    Route::post('social/posts/{post}/like', [SocialPostController::class, 'toggleLike']);
+    Route::post('social/posts/{post}/comments', [SocialPostController::class, 'storeComment']);
+    Route::delete('social/posts/{post}/comments/{comment}', [SocialPostController::class, 'destroyComment']);
+    Route::get('notifications', [NotificationController::class, 'index']);
+    Route::post('notifications', [NotificationController::class, 'store']);
+    Route::post('notifications/{notification}/read', [NotificationController::class, 'markAsRead']);
+    Route::post('notifications/read-all', [NotificationController::class, 'markAllAsRead']);
 
     // Aggregations / Reports
     Route::get('dashboard/summary', [DashboardController::class, 'summary']);

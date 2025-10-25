@@ -28,6 +28,8 @@ import {
   MentionReference,
   NotificationItem,
   NotificationEntityType,
+  SocialPost,
+  SocialComment,
   GoalProgram,
   Goal,
   GoalCheckpoint,
@@ -46,6 +48,7 @@ import {
   PaymentInstallment,
   PaymentScheduleInput,
 } from '../types/types';
+import { initRealtime, disconnectRealtime, subscribeToTenantChannels } from '../lib/realtime';
 import dayjs from 'dayjs';
 import { ApiError, apiClient, isUsingMockApi } from '../services/api';
 import { useAuth } from './AuthContext';
@@ -357,7 +360,7 @@ const mapNotificationFromApi = (raw: any): NotificationItem => {
   const recipientId = ensureNumber(raw?.recipientId ?? raw?.recipient_id);
   const actorId = ensureOptionalNumber(raw?.actorId ?? raw?.actor_id);
   const entityTypeRaw = ensureString(raw?.entityType ?? raw?.entity_type, 'task').toLowerCase();
-  const allowedTypes: NotificationEntityType[] = ['task', 'lawsuit', 'contact', 'goal'];
+  const allowedTypes: NotificationEntityType[] = ['task', 'lawsuit', 'contact', 'goal', 'social'];
   const entityType = allowedTypes.includes(entityTypeRaw as NotificationEntityType)
     ? (entityTypeRaw as NotificationEntityType)
     : 'task';
@@ -952,6 +955,48 @@ const mapUserFromApi = (raw: any): User => {
     bio: optionalString(raw?.bio),
     roleId: roleId ?? undefined,
     roleName: roleName ?? undefined,
+  };
+};
+
+const mapSocialCommentFromApi = (raw: any): SocialComment | null => {
+  const id = ensureNumber(raw?.id);
+  if (!id) {
+    return null;
+  }
+  return {
+    id,
+    postId: ensureNumber(raw?.postId ?? raw?.post_id),
+    userId: ensureNumber(raw?.userId ?? raw?.user_id),
+    tenantId: ensureNumber(raw?.tenantId ?? raw?.tenant_id),
+    body: ensureString(raw?.body),
+    createdAt: ensureString(raw?.createdAt ?? raw?.created_at),
+    updatedAt: optionalString(raw?.updatedAt ?? raw?.updated_at),
+    user: raw?.user ? mapUserFromApi(raw.user) : undefined,
+    mentions: mapMentionsFromApi(raw?.mentions),
+  };
+};
+
+const mapSocialPostFromApi = (raw: any): SocialPost | null => {
+  const id = ensureNumber(raw?.id);
+  if (!id) {
+    return null;
+  }
+
+  const createdAt = optionalString(raw?.createdAt ?? raw?.created_at) ?? new Date().toISOString();
+
+  return {
+    id,
+    tenantId: ensureNumber(raw?.tenantId ?? raw?.tenant_id),
+    userId: ensureNumber(raw?.userId ?? raw?.user_id),
+    content: optionalString(raw?.content),
+    imageUrl: optionalString(raw?.imageUrl ?? raw?.image_url),
+    likesCount: ensureNumber(raw?.likesCount ?? raw?.likes_count),
+    isLiked: Boolean(raw?.isLiked ?? raw?.is_liked),
+    createdAt,
+    updatedAt: optionalString(raw?.updatedAt ?? raw?.updated_at),
+    user: raw?.user ? mapUserFromApi(raw.user) : undefined,
+    comments: toArray<any>(raw?.comments).map(mapSocialCommentFromApi).filter(Boolean) as SocialComment[],
+    mentions: mapMentionsFromApi(raw?.mentions),
   };
 };
 
@@ -1631,6 +1676,7 @@ interface AppContextType {
   permissionsCatalog: PermissionDefinition[];
   userRoles: RoleDefinition[];
   notifications: NotificationItem[];
+  socialPosts: SocialPost[];
   loading: boolean;
   error: string | null;
   updateKanbanCardColumn: (cardId: string, newColumn: KanbanColumn, newPhase: KanbanPhase) => Promise<void>;
@@ -1702,6 +1748,11 @@ interface AppContextType {
   }) => Promise<Transaction>;
   markNotificationAsRead: (notificationId: string) => void;
   markAllNotificationsAsRead: (recipientId: number) => void;
+  createSocialPost: (data: { content?: string; image?: File | null; mentions?: MentionReference[] }) => Promise<void>;
+  deleteSocialPost: (postId: number) => Promise<void>;
+  toggleSocialPostLike: (postId: number) => Promise<void>;
+  addSocialComment: (postId: number, body: string, mentions?: MentionReference[]) => Promise<void>;
+  deleteSocialComment: (postId: number, commentId: number) => Promise<void>;
   addCategory: (
     groupId: CategoryGroupType,
     data: { name: string; color?: string; description?: string }
@@ -1768,7 +1819,7 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated, loading: authLoading, logout, user: authUser } = useAuth();
+  const { isAuthenticated, loading: authLoading, logout, user: authUser, token, tenantSlug } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [lawsuits, setLawsuits] = useState<Lawsuit[]>([]);
@@ -1814,6 +1865,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     }
     return sortNotifications([...NOTIFICATIONS]);
   });
+  const [socialPosts, setSocialPosts] = useState<SocialPost[]>([]);
   const [taskAnnotations, setTaskAnnotations] = useState<AnnotationCache>(() =>
     loadAnnotationCache(TASK_NOTES_STORAGE_KEY)
   );
@@ -1825,6 +1877,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isRealtimeActive, setIsRealtimeActive] = useState(false);
   const permissionsCatalog = useMemo(
     () => PERMISSIONS.map(definition => ({ ...definition })),
     []
@@ -1833,7 +1886,11 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   const taskAnnotationsRef = useRef(taskAnnotations);
   const tasksRef = useRef<Task[]>(tasks);
   const notificationsRef = useRef<NotificationItem[]>(notifications);
+  const contactAnnotationsRef = useRef(contactAnnotations);
+  const lawsuitsRef = useRef<Lawsuit[]>(lawsuits);
+  const lawsuitAnnotationsRef = useRef(lawsuitAnnotations);
   const pollDelayRef = useRef<number>(10000);
+  const realtimeActiveRef = useRef(false);
 
   useEffect(() => {
     taskAnnotationsRef.current = taskAnnotations;
@@ -1844,8 +1901,20 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   }, [tasks]);
 
   useEffect(() => {
+    lawsuitsRef.current = lawsuits;
+  }, [lawsuits]);
+
+  useEffect(() => {
+    lawsuitAnnotationsRef.current = lawsuitAnnotations;
+  }, [lawsuitAnnotations]);
+
+  useEffect(() => {
     notificationsRef.current = notifications;
   }, [notifications]);
+
+  useEffect(() => {
+    contactAnnotationsRef.current = contactAnnotations;
+  }, [contactAnnotations]);
 
   const applyTasksPayload = useCallback(
     (rawTasks: unknown): boolean => {
@@ -2026,6 +2095,14 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
         notification.id === notificationId ? { ...notification, isRead: true } : notification
       )
     );
+
+    if (!isUsingMockApi) {
+      apiClient
+        .post(`/notifications/${notificationId}/read`, {})
+        .catch(error => {
+          console.warn('Falha ao marcar notificação como lida.', error);
+        });
+    }
   };
 
   const markAllNotificationsAsRead = (recipientId: number) => {
@@ -2034,6 +2111,14 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
         notification.recipientId === recipientId ? { ...notification, isRead: true } : notification
       )
     );
+
+    if (!isUsingMockApi) {
+      apiClient
+        .post('/notifications/read-all', {})
+        .catch(error => {
+          console.warn('Falha ao marcar todas notificações como lidas.', error);
+        });
+    }
   };
 
   const createNotificationsForMentions = (
@@ -2043,6 +2128,11 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     entityLabel: string
   ) => {
     if (!Array.isArray(mentions) || mentions.length === 0) return;
+
+    if (!isUsingMockApi) {
+      return;
+    }
+
     const actorId = authUser?.id ?? null;
     const actorName = authUser?.name ?? 'Alguém';
 
@@ -2080,24 +2170,6 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     );
 
     updateNotificationsState(prev => [...newNotifications, ...prev]);
-
-    if (!isUsingMockApi) {
-      newNotifications.forEach(notification => {
-        apiClient
-          .post('/notifications', {
-            recipient_id: notification.recipientId,
-            actor_id: notification.actorId,
-            title: notification.title,
-            message: notification.message,
-            entity_type: notification.entityType,
-            entity_id: notification.entityId,
-            created_at: notification.createdAt,
-          })
-          .catch(error => {
-            console.warn('Falha ao registrar notificação no backend', error);
-          });
-      });
-    }
   };
 
   const ensureResponsibleMention = useCallback(
@@ -2251,6 +2323,519 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     notifyGoalEvent(goal, title, message, { actorId: authUser?.id ?? null });
   };
 
+  const handleRealtimeTaskUpsert = useCallback(
+    (rawTask: any) => {
+      if (!rawTask) return;
+      const mapped = mapTaskFromApi(rawTask);
+      const overrides = taskAnnotationsRef.current[mapped.id];
+      const annotated = overrides
+        ? {
+            ...mapped,
+            notes: overrides.notes ?? mapped.notes,
+            mentions: overrides.mentions ?? mapped.mentions,
+          }
+        : mapped;
+
+      setTasks(prev => {
+        const index = prev.findIndex(task => task.id === annotated.id);
+        if (index === -1) {
+          return [...prev, annotated];
+        }
+        const next = [...prev];
+        next[index] = { ...prev[index], ...annotated };
+        return next;
+      });
+
+      updateAnnotationCache(
+        setTaskAnnotations,
+        TASK_NOTES_STORAGE_KEY,
+        annotated.id,
+        annotated.notes,
+        annotated.mentions
+      );
+    },
+    [setTasks, setTaskAnnotations, updateAnnotationCache]
+  );
+
+  const handleRealtimeLawsuitUpsert = useCallback(
+    (rawLawsuit: any) => {
+      if (!rawLawsuit) return;
+
+      const syncStateFromPayload = (payload: any) => {
+        const mapped = mapLawsuitFromApi(payload);
+        const overrides = lawsuitAnnotationsRef.current[mapped.id];
+        const annotated = overrides
+          ? {
+              ...mapped,
+              notes: overrides.notes ?? mapped.notes,
+              mentions: overrides.mentions ?? mapped.mentions,
+            }
+          : mapped;
+
+        setLawsuits(prev => {
+          const withoutCurrent = prev.filter(item => item.id !== annotated.id);
+          return [annotated, ...withoutCurrent];
+        });
+
+        const card = mapKanbanCardFromLawsuit(payload);
+        const cardId = `lawsuit-${annotated.id}`;
+        setKanbanCards(prev => [{ ...card, id: cardId }, ...prev.filter(item => item.id !== cardId)]);
+
+        updateAnnotationCache(
+          setLawsuitAnnotations,
+          LAWSUIT_NOTES_STORAGE_KEY,
+          annotated.id,
+          annotated.notes,
+          annotated.mentions
+        );
+
+        return annotated.id;
+      };
+
+      const lawsuitId = syncStateFromPayload(rawLawsuit);
+
+      if (!isUsingMockApi) {
+        apiClient
+          .get(`/lawsuits/${lawsuitId}`)
+          .then(syncStateFromPayload)
+          .catch(() => {});
+      }
+    },
+    [setLawsuits, setKanbanCards, setLawsuitAnnotations, updateAnnotationCache, isUsingMockApi]
+  );
+
+  const handleRealtimeTaskDeleted = useCallback(
+    (payload: any) => {
+      const taskId = ensureNumber(payload?.id ?? payload);
+      if (!taskId) return;
+      setTasks(prev => prev.filter(task => task.id !== taskId));
+      setTaskAnnotations(prev => {
+        if (!prev[taskId]) {
+          return prev;
+        }
+        const next = { ...prev };
+        delete next[taskId];
+        persistAnnotationCache(TASK_NOTES_STORAGE_KEY, next);
+        return next;
+      });
+    },
+    [setTasks, setTaskAnnotations]
+  );
+
+  const handleRealtimeLawsuitDeleted = useCallback(
+    (payload: any) => {
+      const lawsuitId = ensureNumber(payload?.id ?? payload);
+      if (!lawsuitId) return;
+      setLawsuits(prev => prev.filter(lawsuit => lawsuit.id !== lawsuitId));
+      setKanbanCards(prev => prev.filter(card => card.id !== `lawsuit-${lawsuitId}`));
+      setLawsuitAnnotations(prev => {
+        if (!prev[lawsuitId]) {
+          return prev;
+        }
+        const next = { ...prev };
+        delete next[lawsuitId];
+        persistAnnotationCache(LAWSUIT_NOTES_STORAGE_KEY, next);
+        return next;
+      });
+      setTasks(prev =>
+        prev.map(task =>
+          task.lawsuitId === lawsuitId ? { ...task, lawsuitId: undefined } : task
+        )
+      );
+    },
+    [setLawsuits, setKanbanCards, setLawsuitAnnotations, setTasks]
+  );
+
+  const handleRealtimeContactUpsert = useCallback(
+    (payload: any) => {
+      if (!payload) return;
+      const mapped = mapContactFromApi(payload);
+      const overrides = contactAnnotationsRef.current[mapped.id];
+      const annotated = overrides
+        ? {
+            ...mapped,
+            notes: overrides.notes ?? mapped.notes,
+            mentions: overrides.mentions ?? mapped.mentions,
+          }
+        : mapped;
+
+      setContacts(prev => {
+        const withoutCurrent = prev.filter(contact => contact.id !== annotated.id);
+        return [annotated, ...withoutCurrent];
+      });
+
+      updateAnnotationCache(
+        setContactAnnotations,
+        CONTACT_NOTES_STORAGE_KEY,
+        annotated.id,
+        annotated.notes,
+        annotated.mentions
+      );
+    },
+    [setContacts, setContactAnnotations, updateAnnotationCache]
+  );
+
+  const handleRealtimeContactDeleted = useCallback(
+    (payload: any) => {
+      const contactId = ensureNumber(payload?.id ?? payload);
+      if (!contactId) return;
+      setContacts(prev => prev.filter(contact => contact.id !== contactId));
+      setContactAnnotations(prev => {
+        if (!prev[contactId]) {
+          return prev;
+        }
+        const next = { ...prev };
+        delete next[contactId];
+        persistAnnotationCache(CONTACT_NOTES_STORAGE_KEY, next);
+        return next;
+      });
+      setPaymentSchedules(prev => prev.filter(schedule => schedule.contactId !== contactId));
+    },
+    [setContacts, setContactAnnotations, setPaymentSchedules]
+  );
+
+  const handleRealtimeTransactionUpsert = useCallback(
+    (payload: any) => {
+      if (!payload) return;
+      const mapped = mapTransactionFromApi(payload);
+      setTransactions(prev => {
+        const without = prev.filter(transaction => transaction.id !== mapped.id);
+        const next = [mapped, ...without];
+        next.sort((a, b) => {
+          const timeA = a.date ? dayjs(a.date).valueOf() : 0;
+          const timeB = b.date ? dayjs(b.date).valueOf() : 0;
+          return timeB - timeA;
+        });
+        return next;
+      });
+    },
+    [setTransactions]
+  );
+
+  const handleRealtimeTransactionDeleted = useCallback(
+    (payload: any) => {
+      const transactionId = ensureNumber(payload?.id ?? payload);
+      if (!transactionId) return;
+      setTransactions(prev => prev.filter(transaction => transaction.id !== transactionId));
+    },
+    [setTransactions]
+  );
+
+  const handleRealtimeCalendarEventUpsert = useCallback(
+    (payload: any) => {
+      if (!payload) return;
+      const mapped = mapCalendarEventFromApi(payload);
+      setCalendarEvents(prev => {
+        const without = prev.filter(event => event.id !== mapped.id);
+        const next = [mapped, ...without];
+        next.sort((a, b) => {
+          const timeA = a.start ? dayjs(a.start).valueOf() : Number.MAX_SAFE_INTEGER;
+          const timeB = b.start ? dayjs(b.start).valueOf() : Number.MAX_SAFE_INTEGER;
+          return timeA - timeB;
+        });
+        return next;
+      });
+    },
+    [setCalendarEvents]
+  );
+
+  const handleRealtimeCalendarEventDeleted = useCallback(
+    (payload: any) => {
+      const eventId = ensureNumber(payload?.id ?? payload);
+      if (!eventId) return;
+      setCalendarEvents(prev => prev.filter(event => event.id !== eventId));
+    },
+    [setCalendarEvents]
+  );
+
+  const handleRealtimeSocialPostUpsert = useCallback(
+    (payload: any) => {
+      if (!payload) return;
+      const mapped = mapSocialPostFromApi(payload);
+      setSocialPosts(prev => {
+        const without = prev.filter(post => post.id !== mapped.id);
+        return [mapped, ...without];
+      });
+    },
+    [setSocialPosts]
+  );
+
+  const handleRealtimeSocialPostDeleted = useCallback(
+    (payload: any) => {
+      const postId = ensureNumber(payload?.id ?? payload?.postId ?? payload?.post_id ?? payload);
+      if (!postId) return;
+      setSocialPosts(prev => prev.filter(post => post.id !== postId));
+    },
+    [setSocialPosts]
+  );
+
+  const handleRealtimeSocialCommentCreated = useCallback(
+    (payload: any) => {
+      if (!payload) return;
+      const mapped = mapSocialCommentFromApi(payload);
+      if (!mapped) return;
+      const postId = mapped.postId;
+      if (!postId) return;
+      setSocialPosts(prev =>
+        prev.map(post =>
+          post.id === postId
+            ? {
+                ...post,
+                comments: [mapped, ...post.comments.filter(comment => comment.id !== mapped.id)],
+              }
+            : post
+        )
+      );
+    },
+    [setSocialPosts]
+  );
+
+  const handleRealtimeSocialCommentDeleted = useCallback(
+    (payload: any) => {
+      const postId = ensureNumber(payload?.postId ?? payload?.post_id);
+      const commentId = ensureNumber(payload?.id ?? payload?.commentId ?? payload?.comment_id);
+      if (!postId || !commentId) return;
+      setSocialPosts(prev =>
+        prev.map(post =>
+          post.id === postId
+            ? {
+                ...post,
+                comments: post.comments.filter(comment => comment.id !== commentId),
+              }
+            : post
+        )
+      );
+    },
+    [setSocialPosts]
+  );
+
+  const handleRealtimeSocialLikeUpdated = useCallback(
+    (payload: any) => {
+      const postId = ensureNumber(payload?.postId ?? payload?.post_id);
+      if (!postId) return;
+      const likesCount = ensureNumber(payload?.likesCount ?? payload?.likes_count);
+      const likerIdsRaw = Array.isArray(payload?.likerIds ?? payload?.liker_ids)
+        ? payload.likerIds ?? payload.liker_ids
+        : [];
+      const likerIds = likerIdsRaw
+        .map((id: any) => Number(id))
+        .filter(id => Number.isFinite(id)) as number[];
+      const currentUserId = authUser?.id;
+      setSocialPosts(prev =>
+        prev.map(post =>
+          post.id === postId
+            ? {
+                ...post,
+                likesCount,
+                isLiked: currentUserId ? likerIds.includes(currentUserId) : post.isLiked,
+              }
+            : post
+        )
+      );
+    },
+    [setSocialPosts, authUser?.id]
+  );
+
+  const handleRealtimeNotificationCreated = useCallback(
+    (payload: any) => {
+      if (!payload) return;
+      const mapped = mapNotificationFromApi(payload);
+      updateNotificationsState(prev => {
+        const index = prev.findIndex(item => item.id === mapped.id);
+        if (index !== -1) {
+          const next = [...prev];
+          next[index] = { ...next[index], ...mapped };
+          return next;
+        }
+        return [mapped, ...prev];
+      });
+    },
+    [updateNotificationsState]
+  );
+
+  const createSocialPost = async ({
+    content,
+    image,
+    mentions,
+  }: {
+    content?: string;
+    image?: File | null;
+    mentions?: MentionReference[];
+  }): Promise<void> => {
+    const normalizedContent = content?.trim() ?? '';
+    if (!normalizedContent && !image) {
+      return;
+    }
+    try {
+      if (isUsingMockApi) {
+        const newPost: SocialPost = {
+          id: Date.now(),
+          tenantId: authUser?.tenantId ?? authUser?.tenant?.id ?? 0,
+          userId: authUser?.id ?? 0,
+          content: normalizedContent,
+          imageUrl: image ? URL.createObjectURL(image) : null,
+          likesCount: 0,
+          isLiked: false,
+          createdAt: new Date().toISOString(),
+          user: authUser ?? undefined,
+          comments: [],
+          mentions: mentions ?? [],
+        };
+        setSocialPosts(prev => [newPost, ...prev]);
+        setError(null);
+        return;
+      }
+
+      const formData = new FormData();
+      if (normalizedContent) {
+        formData.append('content', normalizedContent);
+      }
+      if (image) {
+        formData.append('image', image);
+      }
+      if (Array.isArray(mentions)) {
+        formData.append('mentions', JSON.stringify(mentions));
+      }
+
+      const response = await apiClient.post('/social/posts', formData);
+      const mapped = mapSocialPostFromApi(response);
+      if (!mapped) {
+        return;
+      }
+      setSocialPosts(prev => [mapped, ...prev.filter(post => post.id !== mapped.id)]);
+      setError(null);
+    } catch (err) {
+      console.error(err);
+      setError('Não foi possível publicar a atualização.');
+      throw err;
+    }
+  };
+
+  const deleteSocialPost = async (postId: number): Promise<void> => {
+    try {
+      if (!isUsingMockApi) {
+        await apiClient.delete(`/social/posts/${postId}`);
+      }
+      setSocialPosts(prev => prev.filter(post => post.id !== postId));
+      setError(null);
+    } catch (err) {
+      console.error(err);
+      setError('Não foi possível remover a publicação.');
+      throw err;
+    }
+  };
+
+  const toggleSocialPostLike = async (postId: number): Promise<void> => {
+    try {
+      if (isUsingMockApi) {
+        setSocialPosts(prev =>
+          prev.map(post =>
+            post.id === postId
+              ? {
+                  ...post,
+                  likesCount: post.isLiked ? Math.max(0, post.likesCount - 1) : post.likesCount + 1,
+                  isLiked: !post.isLiked,
+                }
+              : post
+          )
+        );
+        return;
+      }
+
+      const response = (await apiClient.post(`/social/posts/${postId}/like`, {})) as {
+        likesCount?: number;
+        likes_count?: number;
+        isLiked?: boolean;
+        is_liked?: boolean;
+      };
+      const likesCount = ensureNumber(response?.likesCount ?? response?.likes_count);
+      const isLiked = Boolean(response?.isLiked ?? response?.is_liked);
+      setSocialPosts(prev =>
+        prev.map(post => (post.id === postId ? { ...post, likesCount, isLiked } : post))
+      );
+      setError(null);
+    } catch (err) {
+      console.error(err);
+      setError('Não foi possível atualizar a reação da publicação.');
+      throw err;
+    }
+  };
+
+  const addSocialComment = async (postId: number, body: string, mentions?: MentionReference[]): Promise<void> => {
+    const normalizedBody = body.trim();
+    if (!normalizedBody) return;
+    try {
+      if (isUsingMockApi) {
+        const newComment: SocialComment = {
+          id: Date.now(),
+          postId,
+          userId: authUser?.id ?? 0,
+          tenantId: authUser?.tenantId ?? authUser?.tenant?.id ?? 0,
+          body: normalizedBody,
+          createdAt: new Date().toISOString(),
+          user: authUser ?? undefined,
+          mentions: mentions ?? [],
+        };
+        setSocialPosts(prev =>
+          prev.map(post =>
+            post.id === postId
+              ? { ...post, comments: [newComment, ...post.comments] }
+              : post
+          )
+        );
+        setError(null);
+        return;
+      }
+
+      const response = await apiClient.post(`/social/posts/${postId}/comments`, {
+        body: normalizedBody,
+        mentions: mentions ?? [],
+      });
+      const mapped = mapSocialCommentFromApi(response);
+      if (!mapped) {
+        return;
+      }
+      setSocialPosts(prev =>
+        prev.map(post =>
+          post.id === postId
+            ? {
+                ...post,
+                comments: [mapped, ...post.comments.filter(comment => comment.id !== mapped.id)],
+              }
+            : post
+        )
+      );
+      setError(null);
+    } catch (err) {
+      console.error(err);
+      setError('Não foi possível adicionar o comentário.');
+      throw err;
+    }
+  };
+
+  const deleteSocialComment = async (postId: number, commentId: number): Promise<void> => {
+    try {
+      if (!isUsingMockApi) {
+        await apiClient.delete(`/social/posts/${postId}/comments/${commentId}`);
+      }
+      setSocialPosts(prev =>
+        prev.map(post =>
+          post.id === postId
+            ? {
+                ...post,
+                comments: post.comments.filter(comment => comment.id !== commentId),
+              }
+            : post
+        )
+      );
+      setError(null);
+    } catch (err) {
+      console.error(err);
+      setError('Não foi possível remover o comentário.');
+      throw err;
+    }
+  };
+
   const notifyGoalAssignmentAdded = (goal: Goal, assigneeId: number) => {
     if (!Number.isFinite(assigneeId)) return;
     if (authUser?.id && authUser.id === assigneeId) return;
@@ -2284,6 +2869,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       setKanbanCards([]);
       setCalendarEvents([]);
       setTransactions([]);
+      setSocialPosts([]);
       const defaultNotifications = sortNotifications([...NOTIFICATIONS]);
       setNotifications(defaultNotifications);
       persistNotifications(defaultNotifications);
@@ -2303,6 +2889,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
           tasksRaw,
           calendarRaw,
           transactionsRaw,
+          socialPostsRaw,
           paymentSchedulesRaw,
           kanbanRaw,
           goalProgramsRaw,
@@ -2317,6 +2904,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
           apiClient.get('/tasks'),
           apiClient.get('/calendar-events'),
           apiClient.get('/transactions'),
+          apiClient.get('/social/posts'),
           isUsingMockApi ? Promise.resolve([]) : apiClient.get('/payment-schedules'),
           isUsingMockApi ? apiClient.get('/kanban-cards') : Promise.resolve(null),
           isUsingMockApi ? fetchOptionalCollection('/goal-programs') : Promise.resolve(null),
@@ -2430,6 +3018,10 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
           contactAnnotations,
           contactsList
         );
+        const socialPostsList = toArray<any>(socialPostsRaw)
+          .map(mapSocialPostFromApi)
+          .filter((post): post is SocialPost => Boolean(post));
+        setSocialPosts(socialPostsList);
         let notificationsPayload: any = null;
         if (isUsingMockApi) {
           notificationsPayload = NOTIFICATIONS;
@@ -2493,7 +3085,102 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   }, [authLoading, isAuthenticated, logout, applyTasksPayload]);
 
   useEffect(() => {
-    if (authLoading || !isAuthenticated || isUsingMockApi || !isBrowserEnvironment) {
+    if (authLoading) {
+      return;
+    }
+
+    if (!isAuthenticated || isUsingMockApi) {
+      if (realtimeActiveRef.current) {
+        disconnectRealtime();
+        realtimeActiveRef.current = false;
+        setIsRealtimeActive(false);
+      }
+      return;
+    }
+
+    const tenantId = authUser?.tenantId ?? authUser?.tenant?.id ?? null;
+    const userId = authUser?.id ?? null;
+    const effectiveTenantSlug = tenantSlug ?? authUser?.tenant?.slug ?? null;
+
+    if (!token || !tenantId || !userId) {
+      if (realtimeActiveRef.current) {
+        disconnectRealtime();
+        realtimeActiveRef.current = false;
+        setIsRealtimeActive(false);
+      }
+      return;
+    }
+
+    const instance = initRealtime({ token, tenantSlug: effectiveTenantSlug });
+    if (!instance) {
+      realtimeActiveRef.current = false;
+      setIsRealtimeActive(false);
+      return;
+    }
+
+    realtimeActiveRef.current = true;
+    setIsRealtimeActive(true);
+
+    const unsubscribe = subscribeToTenantChannels(tenantId, userId, {
+      onTaskCreated: handleRealtimeTaskUpsert,
+      onTaskUpdated: handleRealtimeTaskUpsert,
+      onTaskDeleted: handleRealtimeTaskDeleted,
+      onLawsuitCreated: handleRealtimeLawsuitUpsert,
+      onLawsuitUpdated: handleRealtimeLawsuitUpsert,
+      onLawsuitDeleted: handleRealtimeLawsuitDeleted,
+      onContactCreated: handleRealtimeContactUpsert,
+      onContactUpdated: handleRealtimeContactUpsert,
+      onContactDeleted: handleRealtimeContactDeleted,
+      onTransactionCreated: handleRealtimeTransactionUpsert,
+      onTransactionUpdated: handleRealtimeTransactionUpsert,
+      onTransactionDeleted: handleRealtimeTransactionDeleted,
+      onCalendarEventCreated: handleRealtimeCalendarEventUpsert,
+      onCalendarEventUpdated: handleRealtimeCalendarEventUpsert,
+      onCalendarEventDeleted: handleRealtimeCalendarEventDeleted,
+      onSocialPostCreated: handleRealtimeSocialPostUpsert,
+      onSocialPostDeleted: handleRealtimeSocialPostDeleted,
+      onSocialCommentCreated: handleRealtimeSocialCommentCreated,
+      onSocialCommentDeleted: handleRealtimeSocialCommentDeleted,
+      onSocialLikeUpdated: handleRealtimeSocialLikeUpdated,
+      onNotificationCreated: handleRealtimeNotificationCreated,
+    });
+
+    return () => {
+      unsubscribe?.();
+      disconnectRealtime();
+      realtimeActiveRef.current = false;
+      setIsRealtimeActive(false);
+    };
+  }, [
+    authLoading,
+    isAuthenticated,
+    isUsingMockApi,
+    token,
+    tenantSlug,
+    authUser?.tenantId,
+    authUser?.tenant?.id,
+    authUser?.tenant?.slug,
+    authUser?.id,
+    handleRealtimeTaskUpsert,
+    handleRealtimeTaskDeleted,
+    handleRealtimeLawsuitUpsert,
+    handleRealtimeLawsuitDeleted,
+    handleRealtimeContactUpsert,
+    handleRealtimeContactDeleted,
+    handleRealtimeTransactionUpsert,
+    handleRealtimeTransactionDeleted,
+    handleRealtimeCalendarEventUpsert,
+    handleRealtimeCalendarEventDeleted,
+    handleRealtimeSocialPostUpsert,
+    handleRealtimeSocialPostDeleted,
+    handleRealtimeSocialCommentCreated,
+    handleRealtimeSocialCommentDeleted,
+    handleRealtimeSocialLikeUpdated,
+    handleRealtimeNotificationCreated,
+  ]);
+
+  useEffect(() => {
+    if (authLoading || !isAuthenticated || isUsingMockApi || !isBrowserEnvironment || isRealtimeActive) {
       return;
     }
 
@@ -2577,6 +3264,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     authLoading,
     isAuthenticated,
     isUsingMockApi,
+    isRealtimeActive,
     applyTasksPayload,
     applyNotificationsPayload,
   ]);
@@ -4429,6 +5117,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     permissionsCatalog,
     userRoles,
     notifications,
+    socialPosts,
     loading,
     error,
     updateKanbanCardColumn,
@@ -4474,6 +5163,11 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     setRolePermission,
     markNotificationAsRead,
     markAllNotificationsAsRead,
+    createSocialPost,
+    deleteSocialPost,
+    toggleSocialPostLike,
+    addSocialComment,
+    deleteSocialComment,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

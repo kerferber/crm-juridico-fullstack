@@ -2,6 +2,8 @@
 const API_BASE_RAW = import.meta.env.VITE_API_BASE_URL || '';
 const API_BASE = API_BASE_RAW.replace(/\/$/, '');
 
+export const API_BASE_URL = API_BASE;
+
 import {
   USERS,
   CONTACTS,
@@ -112,6 +114,13 @@ async function request<T = unknown>(
     }
   }
 
+
+  if (typeof window !== 'undefined') {
+    const socketId = (window as any)?.Echo?.socketId?.();
+    if (socketId) {
+      headers.set('X-Socket-Id', socketId);
+    }
+  }
   const response = await fetch(`${API_BASE}${normalizeEndpoint(endpoint)}`, {
     ...init,
     headers,
@@ -162,10 +171,24 @@ export const apiClient = {
     request<T>(endpoint, { method: 'GET' }, options),
 
   post: async <T = unknown>(endpoint: string, data: any, options?: RequestOptions): Promise<T> =>
-    request<T>(endpoint, { method: 'POST', body: JSON.stringify(data) }, options),
+    request<T>(
+      endpoint,
+      {
+        method: 'POST',
+        body: data instanceof FormData ? data : JSON.stringify(data),
+      },
+      options
+    ),
 
   put: async <T = unknown>(endpoint: string, data: any, options?: RequestOptions): Promise<T> =>
-    request<T>(endpoint, { method: 'PUT', body: JSON.stringify(data) }, options),
+    request<T>(
+      endpoint,
+      {
+        method: 'PUT',
+        body: data instanceof FormData ? data : JSON.stringify(data),
+      },
+      options
+    ),
 
   delete: async (endpoint: string, options?: RequestOptions): Promise<void> => {
     await request(endpoint, { method: 'DELETE' }, options);

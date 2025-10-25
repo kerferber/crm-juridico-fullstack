@@ -31,6 +31,7 @@ export interface Tenant {
   status: string;
   createdAt?: string;
   updatedAt?: string;
+  mentions?: MentionReference[];
   usersCount?: number;
 }
 
@@ -170,6 +171,7 @@ export interface PaymentInstallment {
   transactionId?: number | null;
   createdAt?: string;
   updatedAt?: string;
+  mentions?: MentionReference[];
 }
 
 export interface PaymentSchedule {
@@ -184,6 +186,7 @@ export interface PaymentSchedule {
   firstDueDate?: string | null;
   createdAt?: string;
   updatedAt?: string;
+  mentions?: MentionReference[];
   contact?: Pick<Contact, 'id' | 'name' | 'email' | 'phone'> | null;
   installments: PaymentInstallment[];
 }
@@ -196,7 +199,7 @@ export interface MentionReference {
   label: string;
 }
 
-export type NotificationEntityType = 'task' | 'lawsuit' | 'contact' | 'goal';
+export type NotificationEntityType = 'task' | 'lawsuit' | 'contact' | 'goal' | 'social';
 
 export interface NotificationItem {
   id: string;
@@ -208,6 +211,33 @@ export interface NotificationItem {
   isRead: boolean;
   entityType: NotificationEntityType;
   entityId: number | string;
+}
+
+export interface SocialComment {
+  id: number;
+  postId: number;
+  userId: number;
+  tenantId: number;
+  body: string;
+  createdAt: string;
+  updatedAt?: string;
+  mentions?: MentionReference[];
+  user?: User;
+}
+
+export interface SocialPost {
+  id: number;
+  tenantId: number;
+  userId: number;
+  content?: string | null;
+  imageUrl?: string | null;
+  likesCount: number;
+  isLiked: boolean;
+  createdAt: string;
+  updatedAt?: string;
+  mentions?: MentionReference[];
+  user?: User;
+  comments: SocialComment[];
 }
 
 export interface TimelineEvent {

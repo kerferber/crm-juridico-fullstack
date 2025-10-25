@@ -46,6 +46,7 @@ import AdminApiDocs from './pages/admin/AdminApiDocs';
 import AdminAiSettings from './pages/admin/AdminAiSettings';
 import AdminDeployGuide from './pages/admin/AdminDeployGuide';
 import Payments from './pages/Payments';
+import Social from './pages/Social';
 
 dayjs.extend(relativeTime);
 
@@ -153,8 +154,9 @@ const App: React.FC = () => {
                             <Route path="pagamentos" element={<Payments />} />
                             <Route path="insights" element={<Insights />} />
                             <Route path="gestao" element={<Management />} />
-                            <Route path="gamificacao" element={<Gamification />} />
-                            <Route path="config" element={<Settings />} />
+                          <Route path="gamificacao" element={<Gamification />} />
+                          <Route path="social" element={<Social />} />
+                          <Route path="config" element={<Settings />} />
                             <Route path="perfil" element={<Profile />} />
                           </Route>
                           <Route path="*" element={<Navigate to="/" replace />} />

@@ -2,7 +2,11 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Events\CalendarEventCreated;
+use App\Events\CalendarEventDeleted;
+use App\Events\CalendarEventUpdated;
 use App\Http\Controllers\Controller;
+use App\Http\Resources\CalendarEventResource;
 use App\Models\CalendarEvent;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -63,7 +67,11 @@ class CalendarEventController extends Controller
 
         $event = CalendarEvent::create($data);
 
-        return response()->json($event, 201);
+        CalendarEventCreated::dispatch($event);
+
+        return CalendarEventResource::make($event)
+            ->response()
+            ->setStatusCode(201);
     }
 
     public function show(Request $request, $id)
@@ -87,14 +95,19 @@ class CalendarEventController extends Controller
 
         $event->update($data);
 
-        return $event;
+        CalendarEventUpdated::dispatch($event);
+
+        return CalendarEventResource::make($event);
     }
 
     public function destroy(Request $request, $id)
     {
         $tenantId = $this->ensureTenantId($request);
         $event = CalendarEvent::where('tenant_id', $tenantId)->findOrFail($id);
+        $eventId = (int) $event->id;
         $event->delete();
+
+        CalendarEventDeleted::dispatch($tenantId, $eventId);
 
         return response()->noContent();
     }
