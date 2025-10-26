@@ -35,18 +35,24 @@ const tonePalette = {
     text: '#B91C1C',
     bg: 'rgba(220,38,38,0.12)',
     glow: 'rgba(220,38,38,0.18)',
+    iconBg: 'linear-gradient(135deg, #F87171, #EF4444)',
+    iconColor: '#fff',
   },
   today: {
     border: '#F97316',
     text: '#C2410C',
     bg: 'rgba(249,115,22,0.12)',
     glow: 'rgba(249,115,22,0.18)',
+    iconBg: 'linear-gradient(135deg, #FDBA74, #F97316)',
+    iconColor: '#fff',
   },
   upcoming: {
     border: '#16A34A',
     text: '#166534',
     bg: 'rgba(22,163,74,0.12)',
     glow: 'rgba(22,163,74,0.18)',
+    iconBg: 'linear-gradient(135deg, #6EE7B7, #16A34A)',
+    iconColor: '#0B4F3A',
   },
 };
 
@@ -88,7 +94,7 @@ const SummaryCard: React.FC<{
     <button
       type="button"
       onClick={onClick}
-      className="summary-card group col-span-12 flex flex-col gap-6 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)] md:col-span-4"
+      className="summary-card group flex flex-col gap-6 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)]"
     >
       <span className="summary-card__halo" style={{ background: palette.glow }} />
       <div className="flex items-center justify-between">
@@ -100,7 +106,7 @@ const SummaryCard: React.FC<{
         </span>
         <div
           className="summary-card__icon"
-          style={{ backgroundColor: palette.border }}
+          style={{ background: palette.iconBg, color: palette.iconColor }}
         >
           <Icon className="h-6 w-6" aria-hidden="true" />
         </div>
@@ -209,7 +215,7 @@ const WidgetWrapper: React.FC<{
   const isDragging = dragging === id;
   return (
     <div
-      className="col-span-12 lg:col-span-6"
+      className="col-span-12 md:col-span-6 xl:col-span-4"
       draggable
       onDragStart={event => onDragStart(event, id)}
       onDragOver={onDragOver}
@@ -548,6 +554,32 @@ const Dashboard: React.FC = () => {
 
   const teamPreview = users.slice(0, 5);
   const extraMembers = Math.max(users.length - teamPreview.length, 0);
+  const heroTeamBlock =
+    teamPreview.length > 0 ? (
+      <div className="hero-sidecard__team">
+        <div className="hero-team hero-team--inline">
+          <div className="avatar-stack">
+            {teamPreview.map(user => (
+              <div
+                key={user.id}
+                className="avatar-stack__item"
+                style={{
+                  backgroundImage: user.avatar ? `url(${user.avatar})` : undefined,
+                }}
+              >
+                {!user.avatar && <span>{getInitials(user.name)}</span>}
+              </div>
+            ))}
+            {extraMembers > 0 && (
+              <span className="avatar-stack__more">+{extraMembers}</span>
+            )}
+          </div>
+          <div className="hero-team__copy">
+            Equipe conectada · {users.length} membro{users.length === 1 ? '' : 's'} ativos no painel.
+          </div>
+        </div>
+      </div>
+    ) : null;
 
   const monthlyCopy =
     monthlyStats.percent >= 75
@@ -642,7 +674,7 @@ const Dashboard: React.FC = () => {
             <h1 className="premium-hero__title">{heroTitle}</h1>
             <p className="premium-hero__subtitle">{heroSubtitle}</p>
 
-            <div className="hero-actions">
+            <div className="hero-actions hero-actions--compact">
               <Button className="hero-actions__primary" onClick={() => navigate('/tarefas')}>
                 <CalendarDays className="mr-2 h-4 w-4" />
                 Ir para Minhas Tarefas
@@ -665,30 +697,6 @@ const Dashboard: React.FC = () => {
                 <HeroMetric key={metric.label} {...metric} />
               ))}
             </div>
-
-            {teamPreview.length > 0 && (
-              <div className="hero-team">
-                <div className="avatar-stack">
-                  {teamPreview.map(user => (
-                    <div
-                      key={user.id}
-                      className="avatar-stack__item"
-                      style={{
-                        backgroundImage: user.avatar ? `url(${user.avatar})` : undefined,
-                      }}
-                    >
-                      {!user.avatar && <span>{getInitials(user.name)}</span>}
-                    </div>
-                  ))}
-                  {extraMembers > 0 && (
-                    <span className="avatar-stack__more">+{extraMembers}</span>
-                  )}
-                </div>
-                <div className="hero-team__copy">
-                  Equipe conectada · {users.length} membro{users.length === 1 ? '' : 's'} ativos no painel.
-                </div>
-              </div>
-            )}
           </div>
 
           <div className="hero-sidecard">
@@ -697,7 +705,6 @@ const Dashboard: React.FC = () => {
               <h3 className="hero-sidecard__title">{monthlyStats.percent}% de produtividade</h3>
               <p className="hero-sidecard__subtitle">{monthlyCopy}</p>
             </div>
-
             <div className="hero-sidecard__grid">
               <div>
                 <span className="hero-sidecard__label">Concluídas</span>
@@ -713,6 +720,8 @@ const Dashboard: React.FC = () => {
               </div>
             </div>
 
+            {heroTeamBlock}
+
             <div className="hero-sidecard__footer">
               <Button
                 variant="ghost"
@@ -726,7 +735,7 @@ const Dashboard: React.FC = () => {
         </div>
       </section>
 
-      <section className="grid grid-cols-12 gap-6">
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <SummaryCard
           title="Atrasadas"
           value={summary.overdue}

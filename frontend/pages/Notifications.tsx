@@ -6,6 +6,7 @@ import { useAuth } from '../store/AuthContext';
 import { NotificationItem } from '../types/types';
 import { Button } from '../components/ui/Button';
 import {
+  Bell,
   BellRing,
   CheckCircle2,
   ClipboardList,
@@ -88,6 +89,23 @@ const Notifications: React.FC = () => {
   const lawsuitsCount = userNotifications.filter(notification => notification.entityType === 'lawsuit').length;
   const contactsCount = userNotifications.filter(notification => notification.entityType === 'contact').length;
   const goalsCount = userNotifications.filter(notification => notification.entityType === 'goal').length;
+  const filterCounts: Record<NotificationFilter, number> = {
+    all: userNotifications.length,
+    unread: unreadCount,
+    task: tasksCount,
+    lawsuit: lawsuitsCount,
+    contact: contactsCount,
+    goal: goalsCount,
+  };
+  const entityIcons: Record<NotificationFilter | NotificationItem['entityType'], React.ComponentType<{ className?: string }>> = {
+    task: ClipboardList,
+    lawsuit: Gavel,
+    contact: UserCircle2,
+    goal: Sparkles,
+    social: BellRing,
+    all: BellRing,
+    unread: BellRing,
+  };
 
   const handleNavigate = (notification: NotificationItem) => {
     markNotificationAsRead(notification.id);
@@ -172,7 +190,7 @@ const Notifications: React.FC = () => {
                 para navegar diretamente até o contexto.
               </p>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 items-stretch">
               <div className="summary-card">
                 <span className="summary-card__badge bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-200">
                   Não lidos
@@ -244,12 +262,12 @@ const Notifications: React.FC = () => {
         </div>
       </header>
 
-      <section className="rounded-3xl border border-border/60 bg-surface p-6 shadow-sm dark:border-dark-border/50 dark:bg-dark-surface">
-        <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+      <section className="notification-filters-panel">
+        <div className="flex items-center gap-2 text-sm font-semibold text-foreground dark:text-dark-foreground">
           <ListFilter className="h-4 w-4 text-primary" />
-          Visualizar por categoria
+          Filtros inteligentes
         </div>
-        <div className="mt-4 grid gap-3 md:grid-cols-3 lg:grid-cols-6">
+        <div className="notification-filter-rail">
           {(Object.keys(filterMeta) as NotificationFilter[]).map(filterKey => {
             const meta = filterMeta[filterKey];
             const Icon = meta.icon;
@@ -259,17 +277,16 @@ const Notifications: React.FC = () => {
                 key={filterKey}
                 type="button"
                 onClick={() => setActiveFilter(filterKey)}
-                className={`flex flex-col gap-1 rounded-2xl border px-4 py-3 text-left transition ${
-                  isActive
-                    ? 'border-primary/60 bg-primary/5 text-primary dark:border-dark-primary/60 dark:bg-dark-primary/15'
-                    : 'border-border/60 text-muted-foreground hover:border-primary/40 hover:text-primary dark:border-dark-border/60 dark:hover:border-dark-primary/50'
-                }`}
+                className={`notification-pill ${isActive ? 'is-active' : ''}`}
               >
-                <span className="flex items-center gap-2 text-sm font-semibold">
+                <span className="notification-pill__icon">
                   <Icon className="h-4 w-4" />
-                  {meta.label}
                 </span>
-                <span className="text-xs">{meta.description}</span>
+                <div className="notification-pill__body">
+                  <span className="notification-pill__label">{meta.label}</span>
+                  <span className="notification-pill__description">{meta.description}</span>
+                </div>
+                <span className="notification-pill__count">{filterCounts[filterKey]}</span>
               </button>
             );
           })}
@@ -289,57 +306,77 @@ const Notifications: React.FC = () => {
       ) : (
         <div className="space-y-6">
           {groupedNotifications.map(group => (
-            <section key={group.key} className="space-y-3">
-              <div className="flex items-center gap-3">
-                <div className="h-[1px] flex-1 bg-border/60 dark:bg-dark-border/60" />
-                <span className="rounded-full border border-border/60 bg-surface px-4 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground dark:border-dark-border/60 dark:bg-dark-surface">
-                  {group.label}
-                </span>
-                <div className="h-[1px] flex-1 bg-border/60 dark:bg-dark-border/60" />
-              </div>
-              <div className="space-y-3">
-                {group.items.map(notification => (
-                  <article
-                    key={notification.id}
-                    className={`rounded-2xl border px-5 py-4 transition hover:-translate-y-[1px] ${
-                      notification.isRead
-                        ? 'border-border/60 bg-surface dark:border-dark-border/60 dark:bg-dark-surface'
-                        : 'border-primary/50 bg-primary/5 shadow-[0_18px_48px_-40px_rgba(59,130,246,0.45)] dark:border-dark-primary/60 dark:bg-dark-primary/20'
-                    }`}
-                  >
-                    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                      <div className="space-y-2">
-                        <p className="text-sm font-semibold text-foreground dark:text-dark-foreground">
-                          {notification.title}
-                        </p>
-                        <p className="text-xs text-muted-foreground leading-relaxed">{notification.message}</p>
-                        <div className="flex items-center gap-3 text-[11px] uppercase tracking-[0.26em] text-muted-foreground">
-                          <span>{dayjs(notification.createdAt).format('DD/MM/YYYY HH:mm')}</span>
-                          <span className="h-1 w-1 rounded-full bg-border/70 dark:bg-dark-border/60" />
-                          <span>
-                            {notification.entityType ? notification.entityType.toUpperCase() : 'ALERTA'}
-                          </span>
-                        </div>
+            <section key={group.key} className="notification-group">
+              <div className="notification-group__label">{group.label}</div>
+              <div className="notification-timeline">
+                {group.items.map((notification, index) => {
+                  const Icon = entityIcons[notification.entityType as NotificationFilter] ?? Bell;
+                  return (
+                    <div key={notification.id} className="notification-node">
+                      <div className="notification-node__rail">
+                        <span
+                          className={`notification-node__dot ${
+                            notification.isRead ? 'is-read' : 'is-unread'
+                          }`}
+                        />
+                        {index !== group.items.length - 1 && <span className="notification-node__line" />}
                       </div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        {!notification.isRead && (
+                      <article
+                        className={`notification-card ${
+                          notification.isRead ? 'notification-card--read' : 'notification-card--unread'
+                        }`}
+                      >
+                        <div className="notification-card__icon">
+                          <Icon className="h-4 w-4" />
+                        </div>
+                        <div className="notification-card__body">
+                          <div className="notification-card__header">
+                            <p className="notification-card__title">{notification.title}</p>
+                            <span className="notification-card__timestamp">
+                              {dayjs(notification.createdAt).format('DD MMM · HH:mm')}
+                            </span>
+                          </div>
+                            <p className="notification-card__message">
+                              <span className="notification-card__author">{
+                                notification.message?.split(' ')[0] ?? ''
+                              }</span>{' '}
+                              {notification.message?.replace(/^(\S+)/, '').trim()}
+                            </p>
+                          <div className="notification-card__chips">
+                            <span className="notification-chip">
+                              {(notification.entityType || 'alerta').toUpperCase()}
+                            </span>
+                            {notification.isRead ? (
+                              <span className="notification-chip is-muted">Lido</span>
+                            ) : (
+                              <span className="notification-chip is-highlight">Novo</span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="notification-card__actions">
+                          {!notification.isRead && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="notification-card__button"
+                              onClick={() => markNotificationAsRead(notification.id)}
+                            >
+                              <CheckCircle2 className="h-4 w-4" />
+                              Lida
+                            </Button>
+                          )}
                           <Button
                             size="sm"
-                            variant="ghost"
-                            onClick={() => markNotificationAsRead(notification.id)}
-                            className="inline-flex items-center gap-2 text-xs font-semibold"
+                            className="notification-card__button notification-card__button--primary"
+                            onClick={() => handleNavigate(notification)}
                           >
-                            <CheckCircle2 className="h-4 w-4" />
-                            Marcar como lida
+                            Abrir
                           </Button>
-                        )}
-                        <Button size="sm" onClick={() => handleNavigate(notification)} className="text-xs">
-                          Abrir detalhe
-                        </Button>
-                      </div>
+                        </div>
+                      </article>
                     </div>
-                  </article>
-                ))}
+                  );
+                })}
               </div>
             </section>
           ))}
