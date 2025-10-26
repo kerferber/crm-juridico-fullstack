@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import dayjs from 'dayjs';
 import { Link } from 'react-router-dom';
 import { Task, TaskStatus, CategoryItem } from '../../types/types';
@@ -115,11 +115,15 @@ const TaskListRow: React.FC<{
   task: Task;
   onSelect?: (task: Task) => void;
   categoryMap: Map<string, CategoryItem>;
-}> = ({ task, onSelect, categoryMap }) => {
+  lawsuitMap: Map<number, { internalNumber: string }>;
+  contactMap: Map<number, { name: string }>;
+}> = ({ task, onSelect, categoryMap, lawsuitMap, contactMap }) => {
   const isOverdue =
     task.status !== TaskStatus.Concluida && dayjs(task.deadline).isBefore(dayjs(), 'day');
   const category = task.categoryId ? categoryMap.get(task.categoryId) : undefined;
   const categoryLabel = category?.name ?? (task.categoryId ? 'Categoria removida' : undefined);
+  const linkedLawsuit = task.lawsuitId ? lawsuitMap.get(task.lawsuitId) : undefined;
+  const linkedContact = task.clientId ? contactMap.get(task.clientId) : undefined;
 
   return (
     <div className="flex flex-col gap-2 px-3 py-2.5 text-sm transition hover:bg-muted/40 dark:hover:bg-dark-border/30 lg:flex-row lg:items-center lg:gap-4">
@@ -143,6 +147,26 @@ const TaskListRow: React.FC<{
               />
               {categoryLabel}
             </span>
+          )}
+          {(linkedLawsuit || linkedContact) && (
+            <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+              {linkedLawsuit && (
+                <Link
+                  to={`/processos/${task.lawsuitId}`}
+                  className="inline-flex items-center gap-1 rounded-full border border-border/60 px-2 py-0.5 text-primary hover:border-primary/60 dark:border-dark-border/60 dark:text-dark-primary"
+                >
+                  Processo {linkedLawsuit.internalNumber}
+                </Link>
+              )}
+              {linkedContact && (
+                <Link
+                  to={`/contatos/${task.clientId}`}
+                  className="inline-flex items-center gap-1 rounded-full border border-border/60 px-2 py-0.5 text-primary hover:border-primary/60 dark:border-dark-border/60 dark:text-dark-primary"
+                >
+                  Cliente {linkedContact.name}
+                </Link>
+              )}
+            </div>
           )}
         </div>
         <span
@@ -174,7 +198,7 @@ const TaskListRow: React.FC<{
 };
 
 export const TaskListView: React.FC<TaskListViewProps> = ({ sections, onSelect }) => {
-  const { categoryGroups } = useApp();
+  const { categoryGroups, lawsuits, contacts } = useApp();
   const taskCategoryMap = useMemo(() => {
     const group = categoryGroups.find(categoryGroup => categoryGroup.id === 'tasks');
     const map = new Map<string, CategoryItem>();
@@ -185,6 +209,20 @@ export const TaskListView: React.FC<TaskListViewProps> = ({ sections, onSelect }
     }
     return map;
   }, [categoryGroups]);
+  const lawsuitMap = useMemo(() => {
+    const map = new Map<number, { internalNumber: string }>();
+    lawsuits.forEach(lawsuit => {
+      map.set(lawsuit.id, { internalNumber: lawsuit.internalNumber });
+    });
+    return map;
+  }, [lawsuits]);
+  const contactMap = useMemo(() => {
+    const map = new Map<number, { name: string }>();
+    contacts.forEach(contact => {
+      map.set(contact.id, { name: contact.name });
+    });
+    return map;
+  }, [contacts]);
 
   const sectionsWithContent = sections.filter(section => section.tasks.length > 0);
   if (sectionsWithContent.length === 0) {
@@ -216,6 +254,8 @@ export const TaskListView: React.FC<TaskListViewProps> = ({ sections, onSelect }
                 task={task}
                 onSelect={onSelect}
                 categoryMap={taskCategoryMap}
+                lawsuitMap={lawsuitMap}
+                contactMap={contactMap}
               />
             ))}
           </div>
@@ -228,19 +268,34 @@ export const TaskListView: React.FC<TaskListViewProps> = ({ sections, onSelect }
 interface TaskBoardViewProps {
   sections: TaskSection[];
   onSelect: (task: Task) => void;
+  onStatusDrop?: (taskId: number, targetSection: TaskSectionKey) => void;
 }
 
 const TaskBoardCard: React.FC<{
   task: Task;
   onSelect?: (task: Task) => void;
   categoryMap: Map<string, CategoryItem>;
-}> = ({ task, onSelect, categoryMap }) => {
+  lawsuitMap: Map<number, { internalNumber: string }>;
+  contactMap: Map<number, { name: string }>;
+  onDragStart?: () => void;
+  onDragEnd?: () => void;
+}> = ({ task, onSelect, categoryMap, lawsuitMap, contactMap, onDragStart, onDragEnd }) => {
   const isOverdue =
     task.status !== TaskStatus.Concluida && dayjs(task.deadline).isBefore(dayjs(), 'day');
   const category = task.categoryId ? categoryMap.get(task.categoryId) : undefined;
   const categoryLabel = category?.name ?? (task.categoryId ? 'Categoria removida' : undefined);
+  const linkedLawsuit = task.lawsuitId ? lawsuitMap.get(task.lawsuitId) : undefined;
+  const linkedContact = task.clientId ? contactMap.get(task.clientId) : undefined;
   return (
-    <div className="flex w-full flex-col gap-3 overflow-hidden rounded-xl border border-border/60 bg-white px-4 pb-4 text-left shadow-[0_14px_24px_-22px_rgba(15,23,42,0.38)] transition hover:-translate-y-[2px] hover:border-primary/50 hover:shadow-lg dark:border-dark-border/60 dark:bg-dark-card/70">
+    <div
+      className="flex w-full flex-col gap-3 overflow-hidden rounded-xl border border-border/60 bg-white px-4 pb-4 text-left shadow-[0_14px_24px_-22px_rgba(15,23,42,0.38)] transition hover:-translate-y-[2px] hover:border-primary/50 hover:shadow-lg dark:border-dark-border/60 dark:bg-dark-card/70"
+      draggable
+      onDragStart={event => {
+        event.dataTransfer.effectAllowed = 'move';
+        onDragStart?.();
+      }}
+      onDragEnd={onDragEnd}
+    >
       <Link
         to={`/tarefas/${task.id}`}
         className="space-y-2 pt-4 transition hover:text-primary"
@@ -275,6 +330,26 @@ const TaskBoardCard: React.FC<{
             {categoryLabel}
           </span>
         )}
+        {(linkedLawsuit || linkedContact) && (
+          <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+            {linkedLawsuit && (
+              <Link
+                to={`/processos/${task.lawsuitId}`}
+                className="inline-flex items-center gap-1 rounded-full border border-border/60 px-2 py-0.5 text-primary hover:border-primary/60 dark:border-dark-border/60 dark:text-dark-primary"
+              >
+                Processo {linkedLawsuit.internalNumber}
+              </Link>
+            )}
+            {linkedContact && (
+              <Link
+                to={`/contatos/${task.clientId}`}
+                className="inline-flex items-center gap-1 rounded-full border border-border/60 px-2 py-0.5 text-primary hover:border-primary/60 dark:border-dark-border/60 dark:text-dark-primary"
+              >
+                Cliente {linkedContact.name}
+              </Link>
+            )}
+          </div>
+        )}
       </Link>
       <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
         <span>Previsto para {dayjs(task.dueDate).format('DD/MM/YYYY')}</span>
@@ -294,8 +369,9 @@ const TaskBoardCard: React.FC<{
   );
 };
 
-export const TaskBoardView: React.FC<TaskBoardViewProps> = ({ sections, onSelect }) => {
-  const { categoryGroups } = useApp();
+export const TaskBoardView: React.FC<TaskBoardViewProps> = ({ sections, onSelect, onStatusDrop }) => {
+  const { categoryGroups, lawsuits, contacts } = useApp();
+  const [draggedTaskId, setDraggedTaskId] = useState<number | null>(null);
   const taskCategoryMap = useMemo(() => {
     const group = categoryGroups.find(categoryGroup => categoryGroup.id === 'tasks');
     const map = new Map<string, CategoryItem>();
@@ -306,13 +382,50 @@ export const TaskBoardView: React.FC<TaskBoardViewProps> = ({ sections, onSelect
     }
     return map;
   }, [categoryGroups]);
+  const lawsuitMap = useMemo(() => {
+    const map = new Map<number, { internalNumber: string }>();
+    lawsuits.forEach(lawsuit => {
+      map.set(lawsuit.id, { internalNumber: lawsuit.internalNumber });
+    });
+    return map;
+  }, [lawsuits]);
+  const contactMap = useMemo(() => {
+    const map = new Map<number, { name: string }>();
+    contacts.forEach(contact => {
+      map.set(contact.id, { name: contact.name });
+    });
+    return map;
+  }, [contacts]);
+
+  const handleDragStart = useCallback((taskId: number) => {
+    setDraggedTaskId(taskId);
+  }, []);
+
+  const handleDragEnd = useCallback(() => {
+    setDraggedTaskId(null);
+  }, []);
 
   return (
     <div className="grid gap-5 px-6 py-6 md:grid-cols-2 xl:grid-cols-4">
       {sections.map(section => (
         <div
           key={section.key}
-          className="flex min-h-[260px] flex-col rounded-3xl border border-border/50 bg-white/80 p-4 shadow-sm dark:border-dark-border/50 dark:bg-dark-card/60"
+          className={cn(
+            'flex min-h-[260px] flex-col rounded-3xl border border-border/50 bg-white/80 p-4 shadow-sm transition dark:border-dark-border/50 dark:bg-dark-card/60',
+            draggedTaskId ? 'shadow-[0_0_0_2px_rgba(99,102,241,0.12)]' : ''
+          )}
+          onDragOver={event => {
+            if (draggedTaskId) {
+              event.preventDefault();
+            }
+          }}
+          onDrop={event => {
+            event.preventDefault();
+            if (draggedTaskId) {
+              onStatusDrop?.(draggedTaskId, section.key);
+              setDraggedTaskId(null);
+            }
+          }}
         >
           <header className="mb-3 flex items-center justify-between">
             <div className="flex flex-col">
@@ -334,7 +447,16 @@ export const TaskBoardView: React.FC<TaskBoardViewProps> = ({ sections, onSelect
               </p>
             ) : (
               section.tasks.map(task => (
-                <TaskBoardCard key={task.id} task={task} onSelect={onSelect} categoryMap={taskCategoryMap} />
+                <TaskBoardCard
+                  key={task.id}
+                  task={task}
+                  onSelect={onSelect}
+                  categoryMap={taskCategoryMap}
+                  lawsuitMap={lawsuitMap}
+                  contactMap={contactMap}
+                  onDragStart={() => handleDragStart(task.id)}
+                  onDragEnd={handleDragEnd}
+                />
               ))
             )}
           </div>

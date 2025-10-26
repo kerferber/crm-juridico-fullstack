@@ -19,6 +19,7 @@ import {
   MessageCircle,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { useApp } from '../../store/AppContext';
 
 interface NavItem {
   to: string;
@@ -26,6 +27,7 @@ interface NavItem {
   icon: React.ComponentType<{ className?: string }>;
   accentClass?: string;
   exact?: boolean;
+  badge?: string | number;
 }
 
 interface SidebarProps {
@@ -33,44 +35,66 @@ interface SidebarProps {
   onMobileClose?: () => void;
 }
 
-const NAV_SECTIONS: { id: string; title: string; items: NavItem[] }[] = [
-  {
-    id: 'operations',
-    title: 'Operações',
-    items: [
-      { to: '/', label: 'Página inicial', icon: Home, accentClass: 'bg-primary/90', exact: true },
-      { to: '/tarefas', label: 'Minhas tarefas', icon: CheckSquare, accentClass: 'bg-emerald-500' },
-      { to: '/notificacoes', label: 'Caixa de entrada', icon: Inbox, accentClass: 'bg-sky-500' },
-      { to: '/social', label: 'Feed interno', icon: MessageCircle, accentClass: 'bg-rose-500' },
-    ],
-  },
-  {
-    id: 'business',
-    title: 'Negócios',
-    items: [
-      { to: '/crm', label: 'CRM · Pipeline', icon: LayoutDashboard, accentClass: 'bg-primary' },
-      { to: '/processos', label: 'Processos', icon: Briefcase, accentClass: 'bg-sky-500' },
-      { to: '/contatos', label: 'Contatos', icon: Users, accentClass: 'bg-rose-500' },
-    ],
-  },
-  {
-    id: 'reports',
-    title: 'Relatórios',
-    items: [
-      { to: '/insights', label: 'Insights', icon: Sparkles, accentClass: 'bg-amber-500' },
-      { to: '/gestao', label: 'Relatórios', icon: BarChart3, accentClass: 'bg-primary/80' },
-      { to: '/financeiro', label: 'Portfólio financeiro', icon: DollarSign, accentClass: 'bg-indigo-500' },
-      { to: '/pagamentos', label: 'Pagamentos previstos', icon: CalendarDays, accentClass: 'bg-emerald-500' },
-      { to: '/gamificacao', label: 'Resultados & Gamificação', icon: Trophy, accentClass: 'bg-purple-500' },
-    ],
-  },
-];
-
 const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen = false, onMobileClose = () => {} }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const isCollapsedDesktop = isCollapsed && !isMobileOpen;
+  const { tasks, lawsuits, contacts, notifications, transactions } = useApp();
+  const unreadNotifications = useMemo(
+    () => notifications.filter(notification => !notification.isRead).length,
+    [notifications]
+  );
 
-  const sections = useMemo(() => NAV_SECTIONS, []);
+  const sections = useMemo(() => {
+    const formatCount = (value?: number) => {
+      if (!value) return undefined;
+      return value > 99 ? '99+' : value.toString();
+    };
+
+    return [
+      {
+        id: 'home',
+        title: 'Visão geral',
+        items: [
+          { to: '/', label: 'Página inicial', icon: Home, accentClass: 'bg-primary/90', exact: true },
+          {
+            to: '/notificacoes',
+            label: 'Caixa de entrada',
+            icon: Inbox,
+            accentClass: 'bg-sky-500',
+            badge: formatCount(unreadNotifications),
+          },
+          { to: '/social', label: 'Feed interno', icon: MessageCircle, accentClass: 'bg-rose-500' },
+        ],
+      },
+      {
+        id: 'journey-prospect',
+        title: 'Prospecção',
+        items: [
+          { to: '/crm', label: 'CRM · Pipeline', icon: LayoutDashboard, accentClass: 'bg-primary', badge: formatCount(lawsuits.length) },
+          { to: '/contatos', label: 'Contatos', icon: Users, accentClass: 'bg-rose-500', badge: formatCount(contacts.length) },
+        ],
+      },
+      {
+        id: 'journey-execution',
+        title: 'Execução',
+        items: [
+          { to: '/processos', label: 'Processos', icon: Briefcase, accentClass: 'bg-sky-500', badge: formatCount(lawsuits.length) },
+          { to: '/tarefas', label: 'Minhas tarefas', icon: CheckSquare, accentClass: 'bg-emerald-500', badge: formatCount(tasks.length) },
+        ],
+      },
+      {
+        id: 'journey-financial',
+        title: 'Financeiro & resultados',
+        items: [
+          { to: '/financeiro', label: 'Fluxo financeiro', icon: DollarSign, accentClass: 'bg-indigo-500', badge: formatCount(transactions.length) },
+          { to: '/pagamentos', label: 'Pagamentos previstos', icon: CalendarDays, accentClass: 'bg-emerald-500' },
+          { to: '/gestao', label: 'Relatórios', icon: BarChart3, accentClass: 'bg-primary/80' },
+          { to: '/gamificacao', label: 'Resultados & Gamificação', icon: Trophy, accentClass: 'bg-purple-500' },
+          { to: '/insights', label: 'Insights', icon: Sparkles, accentClass: 'bg-amber-500' },
+        ],
+      },
+    ];
+  }, [tasks.length, lawsuits.length, contacts.length, unreadNotifications, transactions.length]);
 
   const handleToggleCollapse = () => setIsCollapsed(prev => !prev);
 
@@ -177,6 +201,14 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen = false, onMobileClose =
                           <span className="flex-1 text-sm leading-none text-foreground dark:text-dark-foreground">
                             {item.label}
                           </span>
+                        )}
+                        {item.badge && !isCollapsedDesktop && (
+                          <span className="ml-auto rounded-full bg-primary/15 px-2.5 py-0.5 text-[11px] font-semibold text-primary dark:bg-dark-primary/20 dark:text-dark-primary">
+                            {item.badge}
+                          </span>
+                        )}
+                        {item.badge && isCollapsedDesktop && (
+                          <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-primary/70 dark:bg-dark-primary" />
                         )}
                       </>
                     )}

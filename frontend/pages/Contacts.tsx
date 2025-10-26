@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
+import dayjs from 'dayjs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/Card';
 import { useApp } from '../store/AppContext';
 import { formatDocument, formatDate } from '../lib/utils';
@@ -22,6 +23,8 @@ import { cn } from '../lib/utils';
 import { useContactModal } from '../hooks/useContactModal';
 import { useTaskModal } from '../hooks/useTaskModal';
 import { useProcessModal } from '../hooks/useProcessModal';
+
+const CONTACT_SEGMENTS_KEY = 'workflow-studio:contact-segments:v1';
 
 const STATUS_COLORS: Record<string, string> = {
   Cliente: 'bg-primary/10 text-primary dark:bg-dark-primary/15 dark:text-dark-primary',
@@ -65,6 +68,32 @@ const getBadgeStyles = (color?: string): React.CSSProperties | undefined => {
   };
 };
 
+type SavedSegment = {
+  id: string;
+  name: string;
+  filters: {
+    contactCategory: string;
+    leadCategory: string;
+    owner: string;
+    origin: string;
+  };
+};
+
+const loadSegments = (): SavedSegment[] => {
+  if (typeof window === 'undefined') return [];
+  const raw = window.localStorage.getItem(CONTACT_SEGMENTS_KEY);
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      return parsed as SavedSegment[];
+    }
+  } catch (error) {
+    console.warn('Não foi possível carregar segmentos salvos', error);
+  }
+  return [];
+};
+
 const Contacts: React.FC = () => {
   const { contacts, users, lawsuits, tasks, categoryGroups, deleteContact } = useApp();
   const { open: openContactModal } = useContactModal();
@@ -78,6 +107,15 @@ const Contacts: React.FC = () => {
   const [selectedOrigin, setSelectedOrigin] = useState('all');
   const [deletingContactId, setDeletingContactId] = useState<number | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [savedSegments, setSavedSegments] = useState<SavedSegment[]>(() => loadSegments());
+  const [selectedSegmentId, setSelectedSegmentId] = useState('');
+  const [importing, setImporting] = useState(false);
+  const importInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(CONTACT_SEGMENTS_KEY, JSON.stringify(savedSegments));
+  }, [savedSegments]);
 
   const contactsWithProcesses = useMemo(() => {
     return lawsuits.reduce<Record<number, number>>((acc, lawsuit) => {
@@ -100,6 +138,12 @@ const Contacts: React.FC = () => {
   const totalLeads = contacts.filter(contact => contact.status === 'Lead').length;
   const leadsWithoutProcess = totalContacts - totalWithProcess;
   const leadsPercentage = totalContacts > 0 ? Math.round((totalLeads / totalContacts) * 100) : 0;
+  const followUpAlerts = useMemo(() => {
+    const threshold = dayjs().subtract(21, 'day');
+    return contacts
+      .filter(contact => contact.status === 'Lead' && (!contact.lastInteraction || dayjs(contact.lastInteraction).isBefore(threshold)))
+      .slice(0, 4);
+  }, [contacts]);
 
   const highlightCards = useMemo(
     () => [
@@ -234,6 +278,56 @@ const Contacts: React.FC = () => {
     setSelectedLeadCategory('all');
     setSelectedOwner('all');
     setSelectedOrigin('all');
+    setSelectedSegmentId('');
+  };
+
+  const handleApplySegment = (segmentId: string) => {
+    setSelectedSegmentId(segmentId);
+    const segment = savedSegments.find(item => item.id === segmentId);
+    if (!segment) return;
+    setSelectedContactCategory(segment.filters.contactCategory);
+    setSelectedLeadCategory(segment.filters.leadCategory);
+    setSelectedOwner(segment.filters.owner);
+    setSelectedOrigin(segment.filters.origin);
+  };
+
+  const handleSaveSegment = () => {
+    const name = window.prompt('Nome do segmento');
+    if (!name) return;
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    const newSegment: SavedSegment = {
+      id: `${Date.now()}`,
+      name: trimmed,
+      filters: {
+        contactCategory: selectedContactCategory,
+        leadCategory: selectedLeadCategory,
+        owner: selectedOwner,
+        origin: selectedOrigin,
+      },
+    };
+    setSavedSegments(prev => [...prev, newSegment]);
+    setSelectedSegmentId(newSegment.id);
+  };
+
+  const handleDeleteSegment = (segmentId: string) => {
+    setSavedSegments(prev => prev.filter(segment => segment.id !== segmentId));
+    if (selectedSegmentId === segmentId) {
+      setSelectedSegmentId('');
+    }
+  };
+
+  const handleImportFile = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setImporting(true);
+    setTimeout(() => {
+      setImporting(false);
+      window.alert(`Arquivo "${file.name}" enviado para processamento.`);
+      if (importInputRef.current) {
+        importInputRef.current.value = '';
+      }
+    }, 800);
   };
 
   const handleDeleteContact = async (target: typeof contacts[number]) => {
@@ -258,96 +352,201 @@ const Contacts: React.FC = () => {
 
   return (
     <div className="space-y-5">
-      <section className="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-[#F1F6FF] via-white to-[#E9F2FF] px-6 py-7 text-slate-800 shadow-[0_24px_68px_-44px_rgba(15,23,42,0.35)] dark:border-dark-border/60 dark:from-[#1E1B4B] dark:via-[#3730A3] dark:to-[#1E3A8A] dark:text-white">
-        <div className="pointer-events-none absolute inset-0 opacity-50">
-          <div className="absolute -left-24 top-10 h-56 w-56 rounded-full bg-sky-200/60 blur-3xl" />
-          <div className="absolute -bottom-28 right-0 h-64 w-64 rounded-full bg-indigo-200/60 blur-3xl" />
-        </div>
-        <div className="relative grid gap-6 lg:grid-cols-[1.5fr,0.7fr]">
-          <div className="space-y-5">
-            <span className="inline-flex items-center gap-2 rounded-md border border-slate-100 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.32em] text-slate-600 shadow-sm dark:border-white/40 dark:bg-white/10 dark:text-white/80">
-              <Sparkles className="h-4 w-4 text-sky-500 dark:text-white" />
-              Relacionamentos Premium
-            </span>
-            <div className="space-y-3">
-              <h1 className="text-[26px] font-semibold leading-tight text-slate-900 lg:text-[32px] dark:text-white">
-                Transforme sua carteira em oportunidades com acompanhamento de alto nível.
-              </h1>
-              <p className="max-w-2xl text-[13px] text-slate-600 lg:text-sm dark:text-white/75">
-                Centralize informações de clientes, leads e parceiros para priorizar follow-ups e
-                ativar novos negócios com poucos cliques.
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2.5">
-              <Button
-                size="sm"
-                className="rounded-md bg-sky-500 px-5 text-sm font-semibold text-white shadow-[0_16px_32px_-20px_rgba(56,189,248,0.4)] transition hover:bg-sky-600"
-                onClick={openContactModal}
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Novo contato
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="rounded-md border border-slate-200 bg-white/80 px-5 text-sm font-semibold text-slate-600 shadow-inner transition hover:border-sky-300 hover:text-sky-600 dark:border-white/30 dark:bg-white/10 dark:text-white"
-              >
-                <Upload className="mr-2 h-4 w-4" />
-                Importar planilha
-              </Button>
-            </div>
-            <div className="flex flex-wrap gap-x-6 gap-y-3 text-[11px] uppercase tracking-[0.24em] text-slate-500 dark:text-white/70">
-              <span>{totalContacts} na carteira</span>
-              <span>{totalWithProcess} com processos ativos</span>
-              <span>{totalLeads} leads em nutrição</span>
-            </div>
-            <div className="grid gap-3 text-sm sm:grid-cols-2">
-              {highlightCards.map(card => (
-                <div
-                  key={card.title}
-                  className="rounded-lg border border-slate-200/70 bg-white p-4 shadow-[0_14px_36px_-28px_rgba(15,23,42,0.25)] backdrop-blur-sm dark:border-white/20 dark:bg-white/10"
-                >
-                  <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500 dark:text-white/70">
-                    <span>{card.title}</span>
-                    <card.icon className="h-5 w-5 text-slate-500 dark:text-white" />
-                  </div>
-                  <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">
-                    {card.value}
-                  </p>
-                  <p className="mt-1 text-xs text-slate-500 dark:text-white/70">
-                    {card.description}
-                  </p>
-                </div>
-              ))}
-            </div>
+      <section className="rounded-2xl border border-border/60 bg-white px-5 py-5 shadow-sm dark:border-dark-border/60 dark:bg-dark-card/80">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-muted-foreground">
+              Relacionamentos
+            </p>
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground dark:text-dark-foreground">
+              Carteira ativa e oportunidades quentes
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Monitore indicadores críticos e use segmentos salvos para agir com rapidez.
+            </p>
           </div>
-          <div className="space-y-4 rounded-xl border border-slate-200/70 bg-white p-5 text-slate-700 shadow-[0_20px_50px_-40px_rgba(15,23,42,0.28)] backdrop-blur-sm dark:border-white/20 dark:bg-white/10 dark:text-white">
-            <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500 dark:text-white/75">
-              <span>Visão rápida</span>
-              <Users className="h-4 w-4 text-slate-500 dark:text-white" />
-            </div>
-            <div className="space-y-3 text-sm">
-              {quickStats.map(stat => (
-                <div key={stat.label} className="flex items-center justify-between text-slate-600 dark:text-white/80">
-                  <span>{stat.label}</span>
-                  <span className="text-lg font-semibold text-slate-900 dark:text-white">{stat.value}</span>
-                </div>
-              ))}
-            </div>
-            <div>
-              <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.24em] text-slate-500 dark:text-white/70">
-                <span>% Leads na base</span>
-                <span className="text-sm font-semibold text-slate-900 dark:text-white">
-                  {leadsPercentage}%
-                </span>
+          <div className="flex flex-wrap gap-2">
+            <Button className="gap-2 rounded-full" size="sm" onClick={openContactModal}>
+              <Plus className="h-4 w-4" />
+              Novo contato
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2 rounded-full"
+              onClick={() => importInputRef.current?.click()}
+              disabled={importing}
+            >
+              <Upload className="h-4 w-4" />
+              {importing ? 'Importando...' : 'Importar planilha'}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-2 rounded-full"
+              onClick={() => {
+                const csvRows = [
+                  [
+                    'nome',
+                    'email',
+                    'telefone',
+                    'documento',
+                    'status',
+                    'origem',
+                    'responsavel_id',
+                    'categoria_id',
+                    'lead_categoria_id',
+                    'ultima_interacao',
+                    'anotacoes'
+                  ],
+                  [
+                    'Empresa Alpha Ltda',
+                    'contato@alpha.com',
+                    '(11) 99999-9999',
+                    '12345678000190',
+                    'Cliente',
+                    'Indicação',
+                    '1',
+                    'contacts-cliente',
+                    'leads-clientes-ativos',
+                    '2025-01-15',
+                    'Validar proposta com @Sofia.'
+                  ],
+                ];
+                const csvContent = csvRows.map(row => row.map(value => `"${value}"`).join(',')).join('\n');
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'modelo-importacao-contatos.csv';
+                link.click();
+                URL.revokeObjectURL(url);
+              }}
+            >
+              Baixar modelo
+            </Button>
+            <input
+              ref={importInputRef}
+              type="file"
+              accept=".csv,.xlsx"
+              className="hidden"
+              onChange={handleImportFile}
+            />
+          </div>
+        </div>
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {highlightCards.map(card => (
+            <div
+              key={card.title}
+              className="rounded-2xl border border-border/60 bg-surface px-4 py-4 shadow-sm dark:border-dark-border/60 dark:bg-dark-surface/60"
+            >
+              <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+                <span>{card.title}</span>
+                <card.icon className="h-4 w-4 text-muted-foreground" />
               </div>
-              <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-200/50 dark:bg-white/15">
-                <div
-                  className="h-full rounded-full bg-sky-500 dark:bg-white"
-                  style={{ width: `${leadsPercentage}%` }}
-                />
+              <p className="mt-2 text-2xl font-semibold text-foreground dark:text-dark-foreground">
+                {card.value}
+              </p>
+              <p className="text-xs text-muted-foreground">{card.description}</p>
+            </div>
+          ))}
+          <div className="rounded-2xl border border-border/60 bg-surface px-4 py-4 shadow-sm dark:border-dark-border/60 dark:bg-dark-surface/60">
+            <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+              <span>% Leads na base</span>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <p className="mt-2 text-2xl font-semibold text-foreground dark:text-dark-foreground">
+              {leadsPercentage}%
+            </p>
+            <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-muted/50 dark:bg-dark-border/60">
+              <div
+                className="h-full rounded-full bg-sky-500 dark:bg-dark-primary"
+                style={{ width: `${leadsPercentage}%` }}
+              />
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">Leads em nutrição ativa</p>
+          </div>
+        </div>
+
+        <div className="mt-4 grid gap-4 lg:grid-cols-[2fr,1fr]">
+          <div className="rounded-2xl border border-border/60 bg-surface px-4 py-4 shadow-sm dark:border-dark-border/60 dark:bg-dark-surface/60">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+                Segmentos salvos
+              </p>
+              <div className="flex gap-2">
+                <Button variant="ghost" size="sm" className="rounded-full text-xs" onClick={handleSaveSegment}>
+                  Salvar segmento
+                </Button>
+                {savedSegments.length > 0 && (
+                  <Button variant="ghost" size="sm" className="rounded-full text-xs" onClick={() => setSavedSegments([])}>
+                    Limpar favoritos
+                  </Button>
+                )}
               </div>
             </div>
+            {savedSegments.length === 0 ? (
+              <p className="mt-3 text-xs text-muted-foreground">
+                Crie combinações personalizadas de filtros e salve para acesso rápido.
+              </p>
+            ) : (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {savedSegments.map(segment => (
+                  <div
+                    key={segment.id}
+                    className={cn(
+                      'inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold',
+                      selectedSegmentId === segment.id
+                        ? 'border-primary/40 bg-primary/10 text-primary dark:border-dark-primary/40 dark:bg-dark-primary/15 dark:text-dark-primary'
+                        : 'border-border/60 bg-white text-muted-foreground dark:border-dark-border/60 dark:bg-dark-card/70 dark:text-dark-muted'
+                    )}
+                  >
+                    <button type="button" onClick={() => handleApplySegment(segment.id)}>
+                      {segment.name}
+                    </button>
+                    <button
+                      type="button"
+                      className="text-muted-foreground hover:text-red-500"
+                      onClick={() => handleDeleteSegment(segment.id)}
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="rounded-2xl border border-border/60 bg-surface px-4 py-4 shadow-sm dark:border-dark-border/60 dark:bg-dark-surface/60">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+              Follow-ups sugeridos
+            </p>
+            {followUpAlerts.length === 0 ? (
+              <p className="mt-3 text-xs text-muted-foreground">
+                Nenhum lead crítico aguardando interação.
+              </p>
+            ) : (
+              <ul className="mt-3 space-y-2 text-sm">
+                {followUpAlerts.map(alert => (
+                  <li key={alert.id} className="flex items-center justify-between gap-2 text-foreground dark:text-dark-foreground">
+                    <span>{alert.name}</span>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="rounded-full px-2 text-[11px]"
+                      onClick={() =>
+                        openTaskModal({
+                          clientId: alert.id,
+                          responsibleId: alert.ownerId ?? users[0]?.id,
+                        })
+                      }
+                    >
+                      Criar tarefa
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </div>
       </section>
@@ -362,14 +561,19 @@ const Contacts: React.FC = () => {
               Acompanhe categorias, estágios e responsáveis para priorizar relacionamentos em alta.
             </CardDescription>
           </div>
-          <div className="flex w-full max-w-xl items-center gap-2.5 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-inner dark:border-dark-border/60 dark:bg-dark-background/70">
-            <Search className="h-4 w-4 text-muted-foreground" />
-            <input
-              value={searchTerm}
-              onChange={event => setSearchTerm(event.target.value)}
-              placeholder="Buscar por nome, documento ou contato..."
-              className="w-full border-none bg-transparent text-sm focus:outline-none dark:text-dark-foreground"
-            />
+          <div className="flex w-full max-w-xl items-center gap-2.5">
+            <label className="flex flex-1 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-muted-foreground shadow-inner dark:border-dark-border/60 dark:bg-dark-background/70">
+              <Search className="h-4 w-4 text-muted-foreground" />
+              <input
+                value={searchTerm}
+                onChange={event => setSearchTerm(event.target.value)}
+                placeholder="Buscar por nome, documento ou contato..."
+                className="w-full border-none bg-transparent text-sm focus:outline-none dark:text-dark-foreground"
+              />
+            </label>
+            <Button variant="ghost" size="sm" className="rounded-full text-xs" onClick={resetFilters}>
+              Limpar filtros
+            </Button>
           </div>
         </CardHeader>
 
@@ -379,6 +583,7 @@ const Contacts: React.FC = () => {
               {actionError}
             </p>
           )}
+
           <div className="flex flex-wrap items-center gap-2">
             {contactCategoryOptions.map(option => {
               const isActive = selectedContactCategory === option.id;
@@ -458,35 +663,35 @@ const Contacts: React.FC = () => {
             </select>
           </div>
 
-          <div className="overflow-x-auto">
-            <div className="min-w-[960px] space-y-3">
-              <div className="grid grid-cols-[1.6fr,1.1fr,1fr,1fr,auto] gap-5 rounded-xl border border-slate-200 bg-muted/30 px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground dark:border-dark-border/60 dark:bg-dark-card/80">
-                <span>Contato</span>
-                <span>Segmentação</span>
-                <span>Responsável</span>
-                <span>Relacionamento</span>
-                <span>Ações</span>
-              </div>
+          <div className="space-y-3">
+            <div className="hidden grid-cols-[1.6fr,1.1fr,1fr,1fr,auto] gap-5 rounded-xl border border-slate-200 bg-muted/30 px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground dark:border-dark-border/60 dark:bg-dark-card/80 lg:grid">
+              <span>Contato</span>
+              <span>Segmentação</span>
+              <span>Responsável</span>
+              <span>Relacionamento</span>
+              <span>Ações</span>
+            </div>
 
-              {filteredContacts.map(contact => {
-                const owner = users.find(user => user.id === contact.ownerId);
-                const processCount = contactsWithProcesses[contact.id] ?? 0;
-                const taskCount = tasksByContact[contact.id] ?? 0;
-                const statusClass =
-                  STATUS_COLORS[contact.status] ??
-                  'bg-slate-100 text-slate-700 dark:bg-slate-500/10 dark:text-slate-200';
-                const contactCategory = contact.categoryId
-                  ? contactCategoryMap.get(contact.categoryId)
-                  : undefined;
-                const leadCategory = contact.leadCategoryId
-                  ? leadCategoryMap.get(contact.leadCategoryId)
-                  : undefined;
+            {filteredContacts.map(contact => {
+              const owner = users.find(user => user.id === contact.ownerId);
+              const processCount = contactsWithProcesses[contact.id] ?? 0;
+              const taskCount = tasksByContact[contact.id] ?? 0;
+              const statusClass =
+                STATUS_COLORS[contact.status] ??
+                'bg-slate-100 text-slate-700 dark:bg-slate-500/10 dark:text-slate-200';
+              const contactCategory = contact.categoryId
+                ? contactCategoryMap.get(contact.categoryId)
+                : undefined;
+              const leadCategory = contact.leadCategoryId
+                ? leadCategoryMap.get(contact.leadCategoryId)
+                : undefined;
 
-                return (
-                  <div
-                    key={contact.id}
-                    className="group grid grid-cols-[1.6fr,1.1fr,1fr,1fr,auto] items-center gap-5 rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-[0_18px_42px_-32px_rgba(30,41,59,0.55)] transition hover:-translate-y-[2px] hover:border-sky-300 hover:shadow-[0_26px_56px_-40px_rgba(59,130,246,0.55)] dark:border-dark-border/60 dark:bg-dark-card/80"
-                  >
+              return (
+                <div
+                  key={contact.id}
+                  className="group rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm transition hover:-translate-y-0.5 hover:border-sky-300 dark:border-dark-border/60 dark:bg-dark-card/80"
+                >
+                  <div className="space-y-4 lg:grid lg:grid-cols-[1.6fr,1.1fr,1fr,1fr,auto] lg:items-center lg:gap-5 lg:space-y-0">
                     <div className="flex items-start gap-3">
                       <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-sky-100 text-sky-600 shadow-inner dark:bg-dark-primary/15 dark:text-dark-primary">
                         <User className="h-5 w-5" />
@@ -557,9 +762,20 @@ const Contacts: React.FC = () => {
                       <p className="font-semibold text-foreground dark:text-dark-foreground">
                         {owner?.name ?? 'Equipe'}
                       </p>
-                      <p className="text-xs text-muted-foreground">
-                        {taskCount} tarefas · {processCount} processos
-                      </p>
+                      <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+                        <Link
+                          to={`/processos?cliente=${contact.id}`}
+                          className="inline-flex items-center gap-1 rounded-full border border-dashed border-border px-2 py-0.5 text-primary hover:border-primary dark:border-dark-border/60 dark:text-dark-primary"
+                        >
+                          {processCount} processo(s)
+                        </Link>
+                        <Link
+                          to={`/tarefas?clientId=${contact.id}`}
+                          className="inline-flex items-center gap-1 rounded-full border border-dashed border-border px-2 py-0.5 text-primary hover:border-primary dark:border-dark-border/60 dark:text-dark-primary"
+                        >
+                          {taskCount} tarefa(s)
+                        </Link>
+                      </div>
                     </div>
 
                     <div className="space-y-1 text-sm">
@@ -568,13 +784,11 @@ const Contacts: React.FC = () => {
                       </span>
                       <p className="text-xs text-muted-foreground">
                         Última interação:{' '}
-                        {contact.lastInteraction
-                          ? formatDate(contact.lastInteraction)
-                          : 'Sem registro'}
+                        {contact.lastInteraction ? formatDate(contact.lastInteraction) : 'Sem registro'}
                       </p>
                     </div>
 
-                    <div className="flex items-center justify-end gap-2">
+                    <div className="flex flex-wrap items-center justify-end gap-2">
                       <Button
                         variant="ghost"
                         size="icon"
@@ -589,43 +803,43 @@ const Contacts: React.FC = () => {
                       >
                         <Briefcase className="h-4 w-4" />
                       </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 rounded-md border border-slate-200 text-sky-600 hover:border-sky-300 hover:bg-sky-50 dark:border-dark-border/60 dark:text-dark-primary dark:hover:border-dark-primary/50 dark:hover:bg-dark-primary/15"
-                      title="Nova tarefa"
-                      onClick={() =>
-                        openTaskModal({
-                          clientId: contact.id,
-                          responsibleId: contact.ownerId ?? users[0]?.id,
-                        })
-                      }
-                    >
-                      <ClipboardList className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 rounded-md border border-red-200 text-red-600 hover:border-red-400 hover:bg-red-50 dark:border-red-500/40 dark:text-red-300 dark:hover:border-red-400 dark:hover:bg-red-500/15"
-                      title="Excluir contato"
-                      onClick={() => handleDeleteContact(contact)}
-                      disabled={deletingContactId === contact.id}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="rounded-md border-sky-400 px-3 py-1 text-xs font-semibold text-sky-600 hover:bg-sky-50 dark:border-dark-primary/40 dark:text-dark-primary dark:hover:bg-dark-primary/15"
-                      asChild
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 rounded-md border border-slate-200 text-sky-600 hover:border-sky-300 hover:bg-sky-50 dark:border-dark-border/60 dark:text-dark-primary dark:hover:border-dark-primary/50 dark:hover:bg-dark-primary/15"
+                        title="Nova tarefa"
+                        onClick={() =>
+                          openTaskModal({
+                            clientId: contact.id,
+                            responsibleId: contact.ownerId ?? users[0]?.id,
+                          })
+                        }
+                      >
+                        <ClipboardList className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 rounded-md border border-red-200 text-red-600 hover:border-red-400 hover:bg-red-50 dark:border-red-500/40 dark:text-red-300 dark:hover:border-red-400 dark:hover:bg-red-500/15"
+                        title="Excluir contato"
+                        onClick={() => handleDeleteContact(contact)}
+                        disabled={deletingContactId === contact.id}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="rounded-md border-sky-400 px-3 py-1 text-xs font-semibold text-sky-600 hover:bg-sky-50 dark:border-dark-primary/40 dark:text-dark-primary dark:hover:bg-dark-primary/15"
+                        asChild
                       >
                         <Link to={`/contatos/${contact.id}`}>Ver perfil</Link>
                       </Button>
                     </div>
                   </div>
-                );
-              })}
-            </div>
+                </div>
+              );
+            })}
           </div>
 
           {filteredContacts.length === 0 && (
@@ -645,6 +859,7 @@ const Contacts: React.FC = () => {
             </div>
           )}
         </CardContent>
+
       </Card>
     </div>
   );
