@@ -10,6 +10,30 @@ import MentionBadges from '../components/mentions/MentionBadges';
 import { cn } from '../lib/utils';
 
 const MAX_CONTENT_LENGTH = 2000;
+const BLOCKED_IMAGE_HOSTS = ['via.placeholder.com', 'placehold.it'];
+
+const sanitizeSocialImageUrl = (url?: string | null) => {
+  if (!url) return null;
+  const trimmed = url.trim();
+  if (!trimmed) return null;
+
+  if (trimmed.startsWith('blob:') || trimmed.startsWith('data:')) {
+    return trimmed;
+  }
+
+  try {
+    const base = typeof window === 'undefined' ? 'http://localhost' : window.location.origin;
+    const parsed = new URL(trimmed, base);
+    const hostname = parsed.hostname?.toLowerCase() ?? '';
+    const isBlocked = BLOCKED_IMAGE_HOSTS.some(blocked => hostname === blocked || hostname.endsWith(`.${blocked}`));
+    if (isBlocked) {
+      return null;
+    }
+    return parsed.href;
+  } catch {
+    return null;
+  }
+};
 
 const Social: React.FC = () => {
   const {
@@ -227,6 +251,7 @@ const Social: React.FC = () => {
             const author = post.user;
             const canDelete = user && (post.userId === user.id || user.isTenantAdmin);
             const commentDraft = commentDrafts[post.id] ?? '';
+            const safeImageUrl = sanitizeSocialImageUrl(post.imageUrl);
             return (
               <article
                 key={post.id}
@@ -274,7 +299,14 @@ const Social: React.FC = () => {
                 )}
                 {post.imageUrl && (
                   <div className="mb-4 overflow-hidden rounded-2xl border border-border/60 dark:border-dark-border/60">
-                    <img src={post.imageUrl} alt="Publicação" className="h-auto w-full object-cover" />
+                    {safeImageUrl ? (
+                      <img src={safeImageUrl} alt="Publicação" className="h-auto w-full object-cover" />
+                    ) : (
+                      <div className="flex h-48 flex-col items-center justify-center gap-2 bg-muted/40 text-xs text-muted-foreground dark:bg-dark-border/40 dark:text-dark-muted">
+                        <ImageIcon className="h-5 w-5" />
+                        <span>Prévia da imagem indisponível.</span>
+                      </div>
+                    )}
                   </div>
                 )}
                 <footer className="mb-4 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">

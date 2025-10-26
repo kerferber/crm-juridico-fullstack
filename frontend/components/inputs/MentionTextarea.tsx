@@ -83,9 +83,15 @@ const MentionTextarea: React.FC<MentionTextareaProps> = ({
     });
   }, [JSON.stringify(initialMentions ?? [])]);
 
+  const mentionsChangeHandlerRef = useRef<MentionTextareaProps['onMentionsChange']>(onMentionsChange);
+
   useEffect(() => {
-    onMentionsChange?.(mentions);
-  }, [mentions, onMentionsChange]);
+    mentionsChangeHandlerRef.current = onMentionsChange;
+  }, [onMentionsChange]);
+
+  useEffect(() => {
+    mentionsChangeHandlerRef.current?.(mentions);
+  }, [mentions]);
 
   useEffect(() => {
     setHighlightedIndex(0);
