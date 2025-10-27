@@ -283,44 +283,43 @@ const Social: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4 rounded-2xl border border-border/60 bg-white px-5 py-4 shadow-sm dark:border-dark-border/60 dark:bg-dark-card/70">
-        <div className="space-y-2">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.28em] text-muted-foreground">
-            Feed interno
-          </span>
-          <h1 className="text-2xl font-semibold text-foreground dark:text-dark-foreground">
-            Atualizações sofisticadas, com foco no conteúdo.
-          </h1>
-          <p className="max-w-3xl text-sm text-muted-foreground">
-            Abra o feed e veja imediatamente as últimas conversas, menções e conquistas do time. Publique em segundos
-            ou acompanhe quem já interagiu hoje.
-          </p>
-        </div>
-        <div className="hero-actions hero-actions--compact">
-          <Button
-            type="button"
-            className="hero-actions__primary gap-2 rounded-full"
-            onClick={() => setIsComposerOpen(true)}
-          >
-            <Feather className="h-4 w-4" />
-            Nova publicação
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            className="hero-actions__secondary gap-2 rounded-full"
-            onClick={() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })}
-          >
-            <MessageCircle className="h-4 w-4" />
-            Últimas conversas
-          </Button>
-          <div className="hero-actions__tools text-xs text-muted-foreground">
-            <span>{contributorsToday} ativo{contributorsToday === 1 ? '' : 's'} hoje</span>
-            <span className="h-1 w-1 rounded-full bg-border/70" />
-            <span>{totalMentions} menções registradas</span>
+      <section className="premium-hero social-premium">
+        <div className="premium-hero__overlay" />
+        <div className="premium-hero__content">
+          <div className="premium-hero__main">
+            <span className="premium-badge">Feed interno</span>
+            <h1 className="premium-hero__title">Atualizações sofisticadas, com foco no conteúdo.</h1>
+            <p className="premium-hero__subtitle">
+              Abra o feed e veja imediatamente as últimas conversas, menções e conquistas do time. Publique em segundos
+              ou acompanhe quem já interagiu hoje.
+            </p>
+            <div className="hero-actions hero-actions--compact">
+              <Button
+                type="button"
+                className="hero-actions__primary gap-2 rounded-full"
+                onClick={() => setIsComposerOpen(true)}
+              >
+                <Feather className="h-4 w-4" />
+                Nova publicação
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                className="hero-actions__secondary gap-2 rounded-full"
+                onClick={() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })}
+              >
+                <MessageCircle className="h-4 w-4" />
+                Últimas conversas
+              </Button>
+              <div className="hero-actions__tools text-xs text-muted-foreground">
+                <span>{contributorsToday} ativo{contributorsToday === 1 ? '' : 's'} hoje</span>
+                <span className="h-1 w-1 rounded-full bg-border/70" />
+                <span>{totalMentions} menções registradas</span>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      </section>
 
       {isComposerOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6">

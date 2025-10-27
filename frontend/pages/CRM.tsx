@@ -176,7 +176,7 @@ const QuickAddCardForm: React.FC<QuickAddCardFormProps> = ({ column, phase }) =>
     <Button
       variant="ghost"
       size="sm"
-      className="mt-2 w-full justify-center rounded-lg border border-dashed border-border/60 text-xs font-semibold text-muted-foreground hover:border-primary hover:text-primary dark:border-dark-border/50"
+      className="crm-add-card mt-3 w-full justify-center rounded-full text-xs font-semibold"
       onClick={() => openForCreate({ column, phase })}
     >
       <Plus size={14} className="mr-2" />
@@ -250,132 +250,100 @@ const CRM: React.FC = () => {
     
     return (
         <div className="flex h-full flex-col space-y-5">
-			<section className="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-[#F3F8FF] via-[#EAF4FF] to-white px-6 py-7 text-slate-800 shadow-[0_28px_70px_-48px_rgba(15,23,42,0.4)]">
-				<div className="pointer-events-none absolute inset-0 opacity-40">
-					<div className="absolute -left-28 top-10 h-56 w-56 rounded-full bg-sky-200/70 blur-3xl" />
-					<div className="absolute -bottom-28 right-0 h-64 w-64 rounded-full bg-indigo-200/70 blur-3xl" />
-                </div>
-                <div className="relative grid gap-8 lg:grid-cols-[1.5fr,0.7fr]">
-                    <div className="space-y-6">
-						<span className="inline-flex items-center gap-2 rounded-md border border-sky-100 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.32em] text-sky-600 shadow-sm">
-							<Sparkles className="h-4 w-4 text-sky-500" />
-                            CRM Premium
+            <section className="premium-hero crm-premium">
+                <div className="premium-hero__overlay" />
+                <div className="premium-hero__content">
+                    <div className="premium-hero__main">
+                        <span className="premium-badge">
+                            <Sparkles className="h-3.5 w-3.5" />
+                            CRM · Pipeline
                         </span>
-						<div className="space-y-3">
-							<h1 className="text-[26px] font-semibold leading-tight text-slate-900 lg:text-[32px]">
-								Domine seu pipeline e acelere conversões estratégicas.
-							</h1>
-							<p className="max-w-2xl text-[13px] text-slate-500 lg:text-sm">
-                                Priorize etapas críticas, acompanhe alertas de prazo e mantenha as negociações avançando com uma visão premium do seu funil jurídico.
-                            </p>
-                        </div>
-						<div className="flex flex-wrap gap-3">
-							<Button
-								size="sm"
-								className="rounded-md bg-sky-500 px-5 text-sm font-semibold text-white shadow-[0_18px_40px_-25px_rgba(56,189,248,0.5)] transition hover:bg-sky-600"
-								onClick={() => openForCreate({ column: KanbanColumn.Prospeccao, phase: activeTab })}
-							>
-								Nova oportunidade
-								<ArrowRight className="ml-2 h-4 w-4" />
-							</Button>
-							<Button
-								variant="ghost"
-								size="sm"
-								className="rounded-md border border-slate-200 bg-white/80 px-5 text-sm font-semibold text-slate-600 shadow-inner transition hover:border-sky-300 hover:text-sky-600"
-							>
-								Relatórios inteligentes
-							</Button>
-						</div>
-                        <div className="space-y-4">
-			<div className="flex flex-wrap gap-x-6 gap-y-3 text-xs uppercase tracking-[0.25em] text-slate-500">
+                        <h1 className="premium-hero__title">Domine seu pipeline e acelere conversões estratégicas.</h1>
+                        <p className="premium-hero__subtitle">
+                            Priorize etapas críticas, acompanhe prazos e mantenha as negociações avançando com uma visão premium do funil jurídico.
+                        </p>
+                        <div className="hero-actions hero-actions--compact">
+                            <Button
+                                className="hero-actions__primary gap-2 rounded-full"
+                                onClick={() => openForCreate({ column: KanbanColumn.Prospeccao, phase: activeTab })}
+                            >
+                                Nova oportunidade
+                                <ArrowRight className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" className="hero-actions__secondary gap-2 rounded-full">
+                                <LayoutGrid className="h-4 w-4" />
+                                Relatórios inteligentes
+                            </Button>
+                            <div className="hero-actions__tools crm-premium__tools">
                                 <span>{metrics.totalCards} cards ativos</span>
-                                <span>{metrics.activeStages} etapas com movimento</span>
-                                <span>{metrics.alerts} com alerta de prazo</span>
+                                <span className="crm-premium__dot" />
+                                <span>{metrics.alerts} alertas críticos</span>
                             </div>
-                            <div className="grid gap-3 text-sm sm:grid-cols-3">
-				{highlightCards.map(card => (
-					<div
-						key={card.title}
-						className="rounded-lg border border-slate-200 bg-white p-4 shadow-[0_20px_50px_-40px_rgba(15,23,42,0.3)]"
-					>
-						<p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">
-							{card.title}
-						</p>
-						<p className="mt-2 text-2xl font-semibold text-slate-900">
-							{card.value}
-						</p>
-						<p className="mt-1 text-xs text-slate-500">{card.description}</p>
-					</div>
-				))}
-                            </div>
+                        </div>
+                        <div className="crm-premium__metrics">
+                            {highlightCards.map(card => (
+                                <div key={card.title} className="crm-premium__metric-card">
+                                    <p className="crm-premium__metric-label">{card.title}</p>
+                                    <p className="crm-premium__metric-value">{card.value}</p>
+                                    <p className="crm-premium__metric-description">{card.description}</p>
+                                </div>
+                            ))}
                         </div>
                     </div>
-		<div className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 text-slate-700 shadow-[0_20px_56px_-40px_rgba(15,23,42,0.32)]">
-			<div className="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">
-				<span>Visão rápida</span>
-				<Briefcase className="h-4 w-4 text-slate-500" />
-			</div>
-			<div className="space-y-3 text-sm">
-				{quickStats.map(stat => (
-					<div key={stat.label} className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50/70 px-4 py-2.5">
-						<span className="text-slate-600">{stat.label}</span>
-						<span className="text-lg font-semibold text-slate-900">{stat.value}</span>
-					</div>
-				))}
-			</div>
-			<div>
-				<p className="text-xs uppercase tracking-[0.24em] text-slate-500">Etapa selecionada</p>
-				<div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-200/60">
-					<div
-						className="h-full rounded-full bg-sky-500"
-						style={{ width: `${stageProgress}%` }}
-					/>
-				</div>
-				<p className="mt-2 text-sm font-semibold uppercase tracking-[0.24em] text-slate-900">
-					{activeTab}
-				</p>
-			</div>
-		</div>
+                    <div className="hero-sidecard crm-premium__sidecard">
+                        <p className="hero-sidecard__eyebrow">Pulso do pipeline</p>
+                        <h3 className="hero-sidecard__title">{Math.round(stageProgress)}% das etapas ativas</h3>
+                        <p className="hero-sidecard__subtitle">
+                            {metrics.activeStages} de {totalColumns} fases com movimento hoje.
+                        </p>
+                        <div className="crm-premium__progress">
+                            <span style={{ width: `${stageProgress}%` }} />
+                        </div>
+                        <div className="hero-sidecard__grid">
+                            {quickStats.map(stat => (
+                                <div key={stat.label}>
+                                    <span className="hero-sidecard__label">{stat.label}</span>
+                                    <span className="hero-sidecard__value">{stat.value}</span>
+                                </div>
+                            ))}
+                        </div>
+                        <div className="crm-premium__note">
+                            Última movimentação às {dayjs().subtract(32, 'minute').format('HH:mm')} · 3 cards adicionados hoje
+                        </div>
+                    </div>
                 </div>
             </section>
 
-            <Card className="rounded-3xl border border-border/70 bg-white shadow-sm dark:border-dark-border/60 dark:bg-dark-card/70">
-                <CardHeader className="flex flex-wrap items-center justify-between gap-3 pb-4">
+            <Card className="crm-panel">
+                <CardHeader className="crm-panel__header">
                     <div className="space-y-1">
-                        <CardTitle className="text-base font-semibold text-foreground dark:text-dark-foreground">
-                            Gestão de pipeline
-                        </CardTitle>
-                        <CardDescription className="text-xs">
+                        <CardTitle className="crm-panel__title">Gestão de pipeline</CardTitle>
+                        <CardDescription className="crm-panel__description">
                             Organize etapas, filtros e agrupamentos
                         </CardDescription>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
-                        <Button variant="outline" size="sm" className="rounded-full border-border/60 px-3 text-xs font-semibold text-muted-foreground transition hover:border-primary hover:text-primary dark:border-dark-border/60 dark:text-dark-foreground">
+                        <Button variant="outline" size="sm" className="crm-chip-button">
                             <Filter className="mr-2 h-3.5 w-3.5" />
                             Filtros
                         </Button>
-                        <Button variant="outline" size="sm" className="rounded-full border-border/60 px-3 text-xs font-semibold text-muted-foreground transition hover:border-primary hover:text-primary dark:border-dark-border/60 dark:text-dark-foreground">
+                        <Button variant="outline" size="sm" className="crm-chip-button">
                             <ArrowUpDown className="mr-2 h-3.5 w-3.5" />
                             Ordenar
                         </Button>
-                        <Button variant="ghost" size="sm" className="rounded-full border border-transparent px-3 text-xs font-semibold text-muted-foreground transition hover:border-primary/40 hover:text-primary dark:text-dark-foreground dark:hover:border-dark-primary dark:hover:text-dark-primary">
+                        <Button variant="ghost" size="sm" className="crm-chip-button crm-chip-button--ghost">
                             <LayoutGrid className="mr-2 h-3.5 w-3.5" />
                             Agrupar
                         </Button>
                     </div>
                 </CardHeader>
-                <CardContent className="border-t border-border/60 pt-4 dark:border-dark-border/50">
-                    <nav className="flex flex-wrap gap-2 text-xs font-medium text-muted-foreground" aria-label="Tabs">
+                <CardContent className="crm-panel__body">
+                    <nav className="crm-tabs" aria-label="Tabs">
                         {tabs.map(tab => (
                             <button
                                 key={tab}
                                 onClick={() => setActiveTab(tab)}
-                                className={cn(
-                                    'relative rounded-full border px-3 py-1 transition',
-                                    activeTab === tab
-                                        ? 'border-primary/60 bg-primary/10 text-primary shadow-sm dark:border-dark-primary/60 dark:bg-dark-primary/20 dark:text-dark-primary'
-                                        : 'border-border/60 bg-white text-muted-foreground hover:border-primary/40 hover:text-primary dark:border-dark-border/60 dark:bg-dark-border/30 dark:text-dark-foreground dark:hover:text-dark-primary'
-                                )}
+                                className={cn('crm-tab', activeTab === tab && 'is-active')}
                             >
                                 {tab}
                             </button>
@@ -389,25 +357,25 @@ const CRM: React.FC = () => {
                     <div 
                         key={column} 
                         className={cn(
-                            'flex h-full flex-col rounded-lg border border-border/60 bg-white p-4 shadow-[0_10px_24px_-22px_rgba(15,23,42,0.32)] transition-colors dark:border-dark-border/60 dark:bg-dark-card/80',
-                            draggedOverColumn === column && 'border-primary/60 bg-primary/5 dark:border-dark-primary/70 dark:bg-dark-primary/10'
+                            'kanban-column',
+                            draggedOverColumn === column && 'is-active'
                         )}
                         onDrop={(e) => handleDrop(e, column)}
                         onDragOver={handleDragOver}
                         onDragEnter={() => setDraggedOverColumn(column)} // SUGESTÃO 2
                         onDragLeave={() => setDraggedOverColumn(null)}  // SUGESTÃO 2
                     >
-                        <header className="mb-3 flex items-center justify-between">
-                            <div>
-                                <span className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground/80">{column}</span>
-                                <p className="text-[10px] text-muted-foreground">Organize leads nesta etapa</p>
+                        <header className="kanban-column__header">
+                            <div className="kanban-column__title">
+                                <span>{column}</span>
+                                <p>Organize leads nesta etapa</p>
                             </div>
-                            <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary dark:bg-dark-primary/20 dark:text-dark-primary">
+                            <span className="kanban-column__count">
                                 {filteredCards.filter(c => c.column === column).length}
                             </span>
                         </header>
-                        <div className="flex flex-1 flex-col overflow-hidden">
-                            <div className="relative -mr-2 flex-1 space-y-3 overflow-y-auto pr-2">
+                        <div className="kanban-column__body">
+                            <div className="kanban-column__cards">
                                 {filteredCards.filter(c => c.column === column).map(card => (
                                     <DraggableKanbanCard key={card.id} card={card} onOpen={openForEdit} />
                                 ))}

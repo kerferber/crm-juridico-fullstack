@@ -6,7 +6,7 @@ import Sidebar from './components/layout/Sidebar';
 import Header from './components/layout/Header';
 import Dashboard from './pages/Dashboard';
 import CRM from './pages/CRM';
-import Contacts from './pages/Contacts';
+import Contacts from './pages/Contacts.tsx';
 import ContactDetail from './pages/ContactDetail';
 import Lawsuits from './pages/Lawsuits';
 import LawsuitDetail from './pages/LawsuitDetail';

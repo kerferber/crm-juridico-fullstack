@@ -144,77 +144,94 @@ const Financial: React.FC = () => {
       : upcomingReceivables.next30 / upcomingReceivables.total;
     return { mediaTicket, runway, inadimplencia };
   }, [transactions, despesaMes, saldo, upcomingReceivables]);
+  const heroMetrics = [
+    {
+      label: 'Saldo consolidado',
+      value: formatCurrency(saldo),
+      description: `Atualizado em ${currentMonth.format('MMM YYYY')}`,
+    },
+    {
+      label: 'Receitas x Despesas',
+      value: `${formatCurrency(receitaMes)} / ${formatCurrency(despesaMes)}`,
+      description: 'Entradas · Saídas do mês',
+    },
+    {
+      label: 'Caixa projetado',
+      value: formatCurrency(caixaProjetado),
+      description: 'Considerando lançamentos previstos',
+    },
+  ];
 
   return (
     <div className="space-y-8">
-      <section className="rounded-2xl border border-border/60 bg-white px-5 py-5 shadow-sm dark:border-dark-border/60 dark:bg-dark-card/80">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-muted-foreground">
-              Performance financeira
-            </p>
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground dark:text-dark-foreground">
-              Fluxo de caixa consolidado
-            </h1>
-            <p className="text-sm text-muted-foreground">
+      <section className="premium-hero workflow-hero workflow-hero--finance">
+        <div className="premium-hero__overlay" />
+        <div className="premium-hero__content">
+          <div className="premium-hero__main">
+            <span className="premium-badge">Performance financeira</span>
+            <h1 className="premium-hero__title">Fluxo de caixa consolidado.</h1>
+            <p className="premium-hero__subtitle">
               Compare entradas e saídas, projete o caixa e dispare movimentos com poucos cliques.
             </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button size="sm" className="gap-2 rounded-full" onClick={() => openTransactionModal(TransactionType.Receita)}>
-              <Plus className="h-4 w-4" />
-              Nova receita
-            </Button>
-            <Button size="sm" variant="outline" className="gap-2 rounded-full" onClick={() => openTransactionModal(TransactionType.Despesa)}>
-              <Minus className="h-4 w-4" />
-              Registrar despesa
-            </Button>
-            <Button size="sm" variant="ghost" className="gap-2 rounded-full" onClick={() => setIsTransferOpen(true)}>
-              <ArrowRightLeft className="h-4 w-4" />
-              Transferência
-            </Button>
-          </div>
-        </div>
-
-        <div className="mt-4 grid gap-3 md:grid-cols-3">
-          {[
-            {
-              title: 'Saldo consolidado',
-              value: formatCurrency(saldo),
-              helper: `Atualizado em ${currentMonth.format('MMM YYYY')}`,
-              icon: TrendingUp,
-            },
-            {
-              title: 'Receitas x Despesas (mês)',
-              value: `${formatCurrency(receitaMes)} / ${formatCurrency(despesaMes)}`,
-              helper: 'Entradas · Saídas',
-              icon: TrendingDown,
-            },
-            {
-              title: 'Caixa projetado',
-              value: formatCurrency(caixaProjetado),
-              helper: 'Considera o que já está previsto',
-              icon: DollarSign,
-            },
-          ].map(card => (
-            <div
-              key={card.title}
-              className="rounded-2xl border border-border/60 bg-surface px-4 py-4 shadow-sm dark:border-dark-border/60 dark:bg-dark-surface/60"
-            >
-              <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
-                <card.icon className="h-3.5 w-3.5 text-muted-foreground" />
-                {card.title}
+            <div className="hero-actions hero-actions--compact">
+              <Button size="sm" className="hero-actions__primary gap-2 rounded-full" onClick={() => openTransactionModal(TransactionType.Receita)}>
+                <Plus className="h-4 w-4" />
+                Nova receita
+              </Button>
+              <Button size="sm" variant="ghost" className="hero-actions__secondary gap-2 rounded-full" onClick={() => openTransactionModal(TransactionType.Despesa)}>
+                <Minus className="h-4 w-4" />
+                Registrar despesa
+              </Button>
+              <Button size="sm" variant="ghost" className="hero-actions__secondary gap-2 rounded-full" onClick={() => setIsTransferOpen(true)}>
+                <ArrowRightLeft className="h-4 w-4" />
+                Transferência
+              </Button>
+              <div className="hero-actions__tools crm-premium__tools">
+                <span>{transactions.length} lançamentos</span>
+                <span className="crm-premium__dot" />
+                <span>{paymentSchedules.length} cronogramas</span>
               </div>
-              <p className="mt-3 text-2xl font-semibold text-foreground dark:text-dark-foreground">
-                {card.value}
-              </p>
-              <p className="text-xs text-muted-foreground">{card.helper}</p>
             </div>
-          ))}
+            <div className="premium-metrics">
+              {heroMetrics.map(metric => (
+                <div key={metric.label} className="premium-metric-card">
+                  <p className="premium-metric-card__label">{metric.label}</p>
+                  <p className="premium-metric-card__value">{metric.value}</p>
+                  <p className="premium-metric-card__description">{metric.description}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="hero-sidecard workflow-sidecard">
+            <p className="hero-sidecard__eyebrow">Recebíveis</p>
+            <h3 className="hero-sidecard__title">{formatCurrency(upcomingReceivables.next30)} nos próximos 30 dias</h3>
+            <p className="hero-sidecard__subtitle">
+              {formatCurrency(upcomingReceivables.total)} previstos no total.
+            </p>
+            <div className="hero-sidecard__grid">
+              <div>
+                <span className="hero-sidecard__label">Ticket médio</span>
+                <span className="hero-sidecard__value">{formatCurrency(executiveKPIs.mediaTicket)}</span>
+              </div>
+              <div>
+                <span className="hero-sidecard__label">Runway</span>
+                <span className="hero-sidecard__value">{executiveKPIs.runway ? `${executiveKPIs.runway.toFixed(1)}m` : '—'}</span>
+              </div>
+              <div>
+                <span className="hero-sidecard__label">Inadimplência</span>
+                <span className="hero-sidecard__value">{(executiveKPIs.inadimplencia * 100).toFixed(1)}%</span>
+              </div>
+            </div>
+            <div className="hero-sidecard__footer">
+              <Button variant="ghost" className="hero-sidecard__cta" onClick={() => setIsTransferOpen(true)}>
+                Registrar transferência
+              </Button>
+            </div>
+          </div>
         </div>
       </section>
 
-      <section className="rounded-2xl border border-border/60 bg-white px-5 py-5 shadow-sm dark:border-dark-border/60 dark:bg-dark-card/80">
+      <section className="premium-panel space-y-4">
         <div className="flex flex-col gap-4">
           <div className="flex flex-wrap items-center gap-3 text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
             <Filter className="h-3.5 w-3.5" />
@@ -271,14 +288,15 @@ const Financial: React.FC = () => {
               ))}
             </select>
             <div className="rounded-xl border border-dashed border-border px-3 py-2 text-xs text-muted-foreground dark:border-dark-border/60">
-              Projeções próximas 30 dias: <span className="text-foreground dark:text-dark-foreground font-semibold">{formatCurrency(upcomingReceivables.next30)}</span>
+              Projeções próximas 30 dias:
+              <span className="text-foreground dark:text-dark-foreground font-semibold">{formatCurrency(upcomingReceivables.next30)}</span>
             </div>
           </div>
         </div>
       </section>
 
       <div className="grid gap-4 md:grid-cols-4">
-        <Card className="border border-border/70 shadow-sm dark:border-dark-border/60">
+        <Card className="premium-panel">
           <CardHeader>
             <CardTitle className="text-sm font-medium">Saldo total</CardTitle>
             <CardDescription className="text-xs">Disponível após receitas e despesas.</CardDescription>
@@ -289,7 +307,7 @@ const Financial: React.FC = () => {
             </p>
           </CardContent>
         </Card>
-        <Card className="border border-border/70 shadow-sm dark:border-dark-border/60">
+        <Card className="premium-panel">
           <CardHeader>
             <CardTitle className="text-sm font-medium">Receita do mês</CardTitle>
             <CardDescription className="text-xs">Atualizada automaticamente.</CardDescription>
@@ -300,7 +318,7 @@ const Financial: React.FC = () => {
             </p>
           </CardContent>
         </Card>
-        <Card className="border border-border/70 shadow-sm dark:border-dark-border/60">
+        <Card className="premium-panel">
           <CardHeader>
             <CardTitle className="text-sm font-medium">Despesas do mês</CardTitle>
             <CardDescription className="text-xs">Pagamentos e custos recorrentes.</CardDescription>
@@ -311,7 +329,7 @@ const Financial: React.FC = () => {
             </p>
           </CardContent>
         </Card>
-        <Card className="border border-border/70 shadow-sm dark:border-dark-border/60">
+        <Card className="premium-panel">
           <CardHeader>
             <CardTitle className="text-sm font-medium">Caixa projetado</CardTitle>
             <CardDescription className="text-xs">Estimativa até o fim do mês.</CardDescription>
@@ -325,7 +343,7 @@ const Financial: React.FC = () => {
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
-        <Card className="border border-border/70 shadow-sm dark:border-dark-border/60">
+        <Card className="premium-panel">
           <CardHeader>
             <CardTitle className="text-sm font-medium">Ticket médio</CardTitle>
             <CardDescription className="text-xs">Receitas totais dividido por número de lançamentos.</CardDescription>
@@ -336,7 +354,7 @@ const Financial: React.FC = () => {
             </p>
           </CardContent>
         </Card>
-        <Card className="border border-border/70 shadow-sm dark:border-dark-border/60">
+        <Card className="premium-panel">
           <CardHeader>
             <CardTitle className="text-sm font-medium">Runway estimado</CardTitle>
             <CardDescription className="text-xs">Meses de operação com o saldo atual.</CardDescription>
@@ -347,7 +365,7 @@ const Financial: React.FC = () => {
             </p>
           </CardContent>
         </Card>
-        <Card className="border border-border/70 shadow-sm dark:border-dark-border/60">
+        <Card className="premium-panel">
           <CardHeader>
             <CardTitle className="text-sm font-medium">Inadimplência projetada</CardTitle>
             <CardDescription className="text-xs">Pendências dos próximos 30 dias / total previsto.</CardDescription>
@@ -360,7 +378,7 @@ const Financial: React.FC = () => {
         </Card>
       </div>
 
-      <Card className="border border-border/70 shadow-sm dark:border-dark-border/60">
+      <Card className="premium-shell">
         <CardHeader>
           <CardTitle>Performance de receitas x despesas</CardTitle>
           <CardDescription>Comparativo dos últimos seis meses.</CardDescription>
@@ -380,7 +398,7 @@ const Financial: React.FC = () => {
         </CardContent>
       </Card>
 
-      <Card className="border border-border/70 shadow-sm dark:border-dark-border/60">
+      <Card className="premium-shell">
         <CardHeader>
           <CardTitle>Últimos lançamentos</CardTitle>
           <CardDescription>Movimentações recentes registradas no fluxo.</CardDescription>
@@ -435,7 +453,7 @@ const Financial: React.FC = () => {
 
       {isTransferOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-6">
-          <div className="w-full max-w-md rounded-2xl border border-border/60 bg-white p-6 shadow-2xl dark:border-dark-border/60 dark:bg-dark-card/90">
+          <div className="w-full max-w-md premium-shell bg-white p-6 shadow-2xl dark:bg-dark-card/90">
             <div className="mb-4 flex items-center justify-between">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.32em] text-muted-foreground">
@@ -447,7 +465,7 @@ const Financial: React.FC = () => {
               </div>
               <button
                 type="button"
-                className="rounded-full border border-border/60 p-1 text-muted-foreground hover:text-foreground dark:border-dark-border/60"
+                className="rounded-full border border-border/40 p-1 text-muted-foreground hover:text-foreground dark:border-dark-border/60"
                 onClick={() => setIsTransferOpen(false)}
               >
                 <X className="h-4 w-4" />

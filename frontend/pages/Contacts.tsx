@@ -137,7 +137,6 @@ const Contacts: React.FC = () => {
   const totalWithProcess = Object.keys(contactsWithProcesses).length;
   const totalLeads = contacts.filter(contact => contact.status === 'Lead').length;
   const leadsWithoutProcess = totalContacts - totalWithProcess;
-  const leadsPercentage = totalContacts > 0 ? Math.round((totalLeads / totalContacts) * 100) : 0;
   const followUpAlerts = useMemo(() => {
     const threshold = dayjs().subtract(21, 'day');
     return contacts
@@ -352,79 +351,75 @@ const Contacts: React.FC = () => {
 
   return (
     <div className="space-y-5">
-      <section className="rounded-2xl border border-border/60 bg-white px-5 py-5 shadow-sm dark:border-dark-border/60 dark:bg-dark-card/80">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-muted-foreground">
-              Relacionamentos
-            </p>
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground dark:text-dark-foreground">
-              Carteira ativa e oportunidades quentes
-            </h1>
-            <p className="text-sm text-muted-foreground">
+      <section className="premium-hero contacts-premium">
+        <div className="premium-hero__overlay" />
+        <div className="premium-hero__content">
+          <div className="premium-hero__main">
+            <span className="premium-badge">Relacionamentos</span>
+            <h1 className="premium-hero__title">Carteira ativa e oportunidades quentes</h1>
+            <p className="premium-hero__subtitle">
               Monitore indicadores críticos e use segmentos salvos para agir com rapidez.
             </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button className="gap-2 rounded-full" size="sm" onClick={openContactModal}>
-              <Plus className="h-4 w-4" />
-              Novo contato
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2 rounded-full"
-              onClick={() => importInputRef.current?.click()}
-              disabled={importing}
-            >
-              <Upload className="h-4 w-4" />
-              {importing ? 'Importando...' : 'Importar planilha'}
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="gap-2 rounded-full"
-              onClick={() => {
-                const csvRows = [
-                  [
-                    'nome',
-                    'email',
-                    'telefone',
-                    'documento',
-                    'status',
-                    'origem',
-                    'responsavel_id',
-                    'categoria_id',
-                    'lead_categoria_id',
-                    'ultima_interacao',
-                    'anotacoes'
-                  ],
-                  [
-                    'Empresa Alpha Ltda',
-                    'contato@alpha.com',
-                    '(11) 99999-9999',
-                    '12345678000190',
-                    'Cliente',
-                    'Indicação',
-                    '1',
-                    'contacts-cliente',
-                    'leads-clientes-ativos',
-                    '2025-01-15',
-                    'Validar proposta com @Sofia.'
-                  ],
-                ];
-                const csvContent = csvRows.map(row => row.map(value => `"${value}"`).join(',')).join('\n');
-                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-                const url = URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = 'modelo-importacao-contatos.csv';
-                link.click();
-                URL.revokeObjectURL(url);
-              }}
-            >
-              Baixar modelo
-            </Button>
+            <div className="hero-actions hero-actions--compact">
+              <Button className="hero-actions__primary gap-2 rounded-full" onClick={openContactModal}>
+                <Plus className="h-4 w-4" />
+                Novo contato
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                className="hero-actions__secondary gap-2 rounded-full"
+                onClick={() => importInputRef.current?.click()}
+                disabled={importing}
+              >
+                <Upload className="h-4 w-4" />
+                {importing ? 'Importando...' : 'Importar planilha'}
+              </Button>
+              <Button
+                variant="ghost"
+                className="hero-actions__secondary gap-2 rounded-full"
+                onClick={() => {
+                  const csvRows = [
+                    [
+                      'nome',
+                      'email',
+                      'telefone',
+                      'documento',
+                      'status',
+                      'origem',
+                      'responsavel_id',
+                      'categoria_id',
+                      'lead_categoria_id',
+                      'ultima_interacao',
+                      'anotacoes',
+                    ],
+                    [
+                      'Empresa Alpha Ltda',
+                      'contato@alpha.com',
+                      '(11) 99999-9999',
+                      '12345678000190',
+                      'Cliente',
+                      'Indicação',
+                      '1',
+                      'contacts-cliente',
+                      'leads-clientes-ativos',
+                      '2025-01-15',
+                      'Validar proposta com @Sofia.',
+                    ],
+                  ];
+                  const csvContent = csvRows.map(row => row.map(value => `"${value}"`).join(',')).join('\n');
+                  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                  const url = URL.createObjectURL(blob);
+                  const link = document.createElement('a');
+                  link.href = url;
+                  link.download = 'modelo-importacao-contatos.csv';
+                  link.click();
+                  URL.revokeObjectURL(url);
+                }}
+              >
+                Baixar modelo
+              </Button>
+            </div>
             <input
               ref={importInputRef}
               type="file"
@@ -434,43 +429,23 @@ const Contacts: React.FC = () => {
             />
           </div>
         </div>
+      </section>
 
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {highlightCards.map(card => (
-            <div
-              key={card.title}
-              className="rounded-2xl border border-border/60 bg-surface px-4 py-4 shadow-sm dark:border-dark-border/60 dark:bg-dark-surface/60"
-            >
-              <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
-                <span>{card.title}</span>
-                <card.icon className="h-4 w-4 text-muted-foreground" />
-              </div>
-              <p className="mt-2 text-2xl font-semibold text-foreground dark:text-dark-foreground">
-                {card.value}
-              </p>
-              <p className="text-xs text-muted-foreground">{card.description}</p>
+      <div className="premium-metrics">
+        {highlightCards.map(card => (
+          <div key={card.title} className="premium-metric-card">
+            <div className="premium-metric-card__label">
+              <span>{card.title}</span>
+              <card.icon className="h-4 w-4" />
             </div>
-          ))}
-          <div className="rounded-2xl border border-border/60 bg-surface px-4 py-4 shadow-sm dark:border-dark-border/60 dark:bg-dark-surface/60">
-            <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
-              <span>% Leads na base</span>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </div>
-            <p className="mt-2 text-2xl font-semibold text-foreground dark:text-dark-foreground">
-              {leadsPercentage}%
-            </p>
-            <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-muted/50 dark:bg-dark-border/60">
-              <div
-                className="h-full rounded-full bg-sky-500 dark:bg-dark-primary"
-                style={{ width: `${leadsPercentage}%` }}
-              />
-            </div>
-            <p className="mt-2 text-xs text-muted-foreground">Leads em nutrição ativa</p>
+            <p className="premium-metric-card__value">{card.value}</p>
+            <p className="premium-metric-card__description">{card.description}</p>
           </div>
-        </div>
+        ))}
+      </div>
 
-        <div className="mt-4 grid gap-4 lg:grid-cols-[2fr,1fr]">
-          <div className="rounded-2xl border border-border/60 bg-surface px-4 py-4 shadow-sm dark:border-dark-border/60 dark:bg-dark-surface/60">
+      <div className="grid gap-4 lg:grid-cols-[2fr,1fr]">
+          <div className="premium-panel">
             <div className="flex items-center justify-between">
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
                 Segmentos salvos
@@ -517,7 +492,7 @@ const Contacts: React.FC = () => {
               </div>
             )}
           </div>
-          <div className="rounded-2xl border border-border/60 bg-surface px-4 py-4 shadow-sm dark:border-dark-border/60 dark:bg-dark-surface/60">
+          <div className="premium-panel">
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
               Follow-ups sugeridos
             </p>
@@ -549,9 +524,8 @@ const Contacts: React.FC = () => {
             )}
           </div>
         </div>
-      </section>
 
-      <Card className="rounded-2xl border border-slate-200 bg-white shadow-[0_18px_48px_-38px_rgba(15,23,42,0.3)] backdrop-blur-sm dark:border-dark-border/60 dark:bg-dark-card/80">
+      <Card className="premium-shell">
         <CardHeader className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <CardTitle className="text-base font-semibold tracking-tight text-foreground dark:text-dark-foreground">
@@ -664,182 +638,147 @@ const Contacts: React.FC = () => {
           </div>
 
           <div className="space-y-3">
-            <div className="hidden grid-cols-[1.6fr,1.1fr,1fr,1fr,auto] gap-5 rounded-xl border border-slate-200 bg-muted/30 px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground dark:border-dark-border/60 dark:bg-dark-card/80 lg:grid">
-              <span>Contato</span>
-              <span>Segmentação</span>
-              <span>Responsável</span>
-              <span>Relacionamento</span>
-              <span>Ações</span>
-            </div>
+            <div className="contact-inbox">
+              {filteredContacts.map((contact, index) => {
+                const owner = users.find(user => user.id === contact.ownerId);
+                const processCount = contactsWithProcesses[contact.id] ?? 0;
+                const taskCount = tasksByContact[contact.id] ?? 0;
+                const statusClass =
+                  STATUS_COLORS[contact.status] ??
+                  'bg-slate-100 text-slate-700 dark:bg-slate-500/10 dark:text-slate-200';
+                const contactCategory = contact.categoryId
+                  ? contactCategoryMap.get(contact.categoryId)
+                  : undefined;
+                const leadCategory = contact.leadCategoryId
+                  ? leadCategoryMap.get(contact.leadCategoryId)
+                  : undefined;
 
-            {filteredContacts.map(contact => {
-              const owner = users.find(user => user.id === contact.ownerId);
-              const processCount = contactsWithProcesses[contact.id] ?? 0;
-              const taskCount = tasksByContact[contact.id] ?? 0;
-              const statusClass =
-                STATUS_COLORS[contact.status] ??
-                'bg-slate-100 text-slate-700 dark:bg-slate-500/10 dark:text-slate-200';
-              const contactCategory = contact.categoryId
-                ? contactCategoryMap.get(contact.categoryId)
-                : undefined;
-              const leadCategory = contact.leadCategoryId
-                ? leadCategoryMap.get(contact.leadCategoryId)
-                : undefined;
+                return (
+                  <div key={contact.id} className="contact-inbox__item">
+                    <div className="contact-inbox__rail">
+                      <span className="contact-inbox__dot" />
+                      {index !== filteredContacts.length - 1 && <span className="contact-inbox__line" />}
+                    </div>
+                    <article className="contact-inbox__card">
+                      <header className="contact-inbox__header">
+                        <div className="contact-inbox__avatar">
+                          <User className="h-5 w-5" />
+                        </div>
+                        <div className="contact-inbox__title">
+                          <Link to={`/contatos/${contact.id}`} className="contact-inbox__name">
+                            {contact.name}
+                          </Link>
+                          <div className="contact-inbox__chips">
+                            {contact.document && (
+                              <span className="contact-inbox__chip">
+                                <IdCard className="h-3 w-3" />
+                                {formatDocument(contact.document)}
+                              </span>
+                            )}
+                            {contact.email && (
+                              <span className="contact-inbox__chip">
+                                <Mail className="h-3 w-3" />
+                                {contact.email}
+                              </span>
+                            )}
+                            {contact.phone && (
+                              <span className="contact-inbox__chip">
+                                <Phone className="h-3 w-3" />
+                                {contact.phone}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <Button variant="secondary" size="sm" className="contact-inbox__cta" asChild>
+                          <Link to={`/contatos/${contact.id}`}>Ver perfil</Link>
+                        </Button>
+                      </header>
 
-              return (
-                <div
-                  key={contact.id}
-                  className="group rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm transition hover:-translate-y-0.5 hover:border-sky-300 dark:border-dark-border/60 dark:bg-dark-card/80"
-                >
-                  <div className="space-y-4 lg:grid lg:grid-cols-[1.6fr,1.1fr,1fr,1fr,auto] lg:items-center lg:gap-5 lg:space-y-0">
-                    <div className="flex items-start gap-3">
-                      <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-sky-100 text-sky-600 shadow-inner dark:bg-dark-primary/15 dark:text-dark-primary">
-                        <User className="h-5 w-5" />
+                      <div className="contact-inbox__badges">
+                        <span className={cn('contact-pill', statusClass)}>{contact.status}</span>
+                        {contactCategory && contactCategory.name !== contact.status && (
+                          <span className="contact-pill" style={getBadgeStyles(contactCategory.color)}>
+                            {contactCategory.name}
+                          </span>
+                        )}
+                        {leadCategory ? (
+                          <span className="contact-pill" style={getBadgeStyles(leadCategory.color)}>
+                            {leadCategory.name}
+                          </span>
+                        ) : (
+                          <span className="contact-pill contact-pill--muted">Sem estágio</span>
+                        )}
                       </div>
-                      <div className="space-y-2">
-                        <Link
-                          to={`/contatos/${contact.id}`}
-                          className="text-sm font-semibold text-foreground transition hover:text-primary dark:text-dark-foreground dark:hover:text-dark-primary"
-                        >
-                          {contact.name}
-                        </Link>
-                        <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                          {contact.document && (
-                            <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-0.5 text-slate-600 dark:bg-slate-700/40 dark:text-slate-200">
-                              <IdCard className="h-3 w-3" />
-                              {formatDocument(contact.document)}
-                            </span>
-                          )}
-                          {contact.email && (
-                            <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-0.5 text-slate-600 dark:bg-slate-700/40 dark:text-slate-200">
-                              <Mail className="h-3 w-3" />
-                              {contact.email}
-                            </span>
-                          )}
-                          {contact.phone && (
-                            <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-0.5 text-slate-600 dark:bg-slate-700/40 dark:text-slate-200">
-                              <Phone className="h-3 w-3" />
-                              {contact.phone}
-                            </span>
-                          )}
+
+                      <div className="contact-inbox__details">
+                        <div>
+                          <span className="contact-inbox__label">Responsável</span>
+                          <p className="contact-inbox__value">{owner?.name ?? 'Equipe'}</p>
+                          <div className="contact-inbox__links">
+                            <Link to={`/processos?cliente=${contact.id}`}>{processCount} processo(s)</Link>
+                            <Link to={`/tarefas?clientId=${contact.id}`}>{taskCount} tarefa(s)</Link>
+                          </div>
+                        </div>
+                        <div>
+                          <span className="contact-inbox__label">Origem</span>
+                          <p className="contact-inbox__value">{contact.origin || 'Origem não informada'}</p>
+                          <p className="contact-inbox__hint">
+                            Última interação:{' '}
+                            {contact.lastInteraction ? formatDate(contact.lastInteraction) : 'Sem registro'}
+                          </p>
                         </div>
                       </div>
-                    </div>
 
-                    <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
-                      <span
-                        className={cn(
-                          'inline-flex items-center rounded-md px-3 py-1 uppercase tracking-[0.18em]',
-                          statusClass
-                        )}
-                      >
-                        {contact.status}
-                      </span>
-                      {contactCategory && contactCategory.name !== contact.status && (
-                        <span
-                          className="inline-flex items-center rounded-md border px-3 py-1"
-                          style={getBadgeStyles(contactCategory.color)}
-                        >
-                          {contactCategory.name}
-                        </span>
-                      )}
-                      {leadCategory && (
-                        <span
-                          className="inline-flex items-center rounded-md border px-3 py-1"
-                          style={getBadgeStyles(leadCategory.color)}
-                        >
-                          {leadCategory.name}
-                        </span>
-                      )}
-                      {!leadCategory && (
-                        <span className="inline-flex items-center rounded-md border border-dashed border-border px-3 py-1 text-muted-foreground dark:border-dark-border">
-                          Sem estágio
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="space-y-1 text-sm">
-                      <p className="font-semibold text-foreground dark:text-dark-foreground">
-                        {owner?.name ?? 'Equipe'}
-                      </p>
-                      <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
-                        <Link
-                          to={`/processos?cliente=${contact.id}`}
-                          className="inline-flex items-center gap-1 rounded-full border border-dashed border-border px-2 py-0.5 text-primary hover:border-primary dark:border-dark-border/60 dark:text-dark-primary"
-                        >
-                          {processCount} processo(s)
-                        </Link>
-                        <Link
-                          to={`/tarefas?clientId=${contact.id}`}
-                          className="inline-flex items-center gap-1 rounded-full border border-dashed border-border px-2 py-0.5 text-primary hover:border-primary dark:border-dark-border/60 dark:text-dark-primary"
-                        >
-                          {taskCount} tarefa(s)
-                        </Link>
-                      </div>
-                    </div>
-
-                    <div className="space-y-1 text-sm">
-                      <span className="inline-flex items-center rounded-md border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-muted-foreground dark:border-dark-border/60 dark:bg-dark-card/70">
-                        {contact.origin || 'Origem não informada'}
-                      </span>
-                      <p className="text-xs text-muted-foreground">
-                        Última interação:{' '}
-                        {contact.lastInteraction ? formatDate(contact.lastInteraction) : 'Sem registro'}
-                      </p>
-                    </div>
-
-                    <div className="flex flex-wrap items-center justify-end gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 rounded-md border border-slate-200 text-sky-600 hover:border-sky-300 hover:bg-sky-50 dark:border-dark-border/60 dark:text-dark-primary dark:hover:border-dark-primary/50 dark:hover:bg-dark-primary/15"
-                        title="Novo processo"
-                        onClick={() =>
-                          openProcessModal({
-                            clientId: contact.id,
-                            responsibleId: contact.ownerId ?? users[0]?.id,
-                          })
-                        }
-                      >
-                        <Briefcase className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 rounded-md border border-slate-200 text-sky-600 hover:border-sky-300 hover:bg-sky-50 dark:border-dark-border/60 dark:text-dark-primary dark:hover:border-dark-primary/50 dark:hover:bg-dark-primary/15"
-                        title="Nova tarefa"
-                        onClick={() =>
-                          openTaskModal({
-                            clientId: contact.id,
-                            responsibleId: contact.ownerId ?? users[0]?.id,
-                          })
-                        }
-                      >
-                        <ClipboardList className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 rounded-md border border-red-200 text-red-600 hover:border-red-400 hover:bg-red-50 dark:border-red-500/40 dark:text-red-300 dark:hover:border-red-400 dark:hover:bg-red-500/15"
-                        title="Excluir contato"
-                        onClick={() => handleDeleteContact(contact)}
-                        disabled={deletingContactId === contact.id}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="rounded-md border-sky-400 px-3 py-1 text-xs font-semibold text-sky-600 hover:bg-sky-50 dark:border-dark-primary/40 dark:text-dark-primary dark:hover:bg-dark-primary/15"
-                        asChild
-                      >
-                        <Link to={`/contatos/${contact.id}`}>Ver perfil</Link>
-                      </Button>
-                    </div>
+                      <footer className="contact-inbox__footer">
+                        <div className="contact-inbox__actions">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="contact-inbox__icon-btn"
+                            title="Novo processo"
+                            onClick={() =>
+                              openProcessModal({
+                                clientId: contact.id,
+                                responsibleId: contact.ownerId ?? users[0]?.id,
+                              })
+                            }
+                          >
+                            <Briefcase className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="contact-inbox__icon-btn"
+                            title="Nova tarefa"
+                            onClick={() =>
+                              openTaskModal({
+                                clientId: contact.id,
+                                responsibleId: contact.ownerId ?? users[0]?.id,
+                              })
+                            }
+                          >
+                            <ClipboardList className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="contact-inbox__icon-btn contact-inbox__icon-btn--danger"
+                            title="Excluir contato"
+                            onClick={() => handleDeleteContact(contact)}
+                            disabled={deletingContactId === contact.id}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <div className="contact-inbox__status-chip">
+                          {contact.leadCategoryId ? 'Em acompanhamento' : 'Sem fluxo definido'}
+                        </div>
+                      </footer>
+                    </article>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
 
           {filteredContacts.length === 0 && (

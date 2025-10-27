@@ -115,6 +115,26 @@ const Payments: React.FC = () => {
       nextDue,
     };
   }, [pendingInstallments, overdueInstallments, paidThisMonth]);
+  const heroMetrics = [
+    {
+      label: 'Pendentes',
+      value: formatCurrency(totals.pendingTotal),
+      description: `${pendingInstallments.length} parcela(s) aguardando pagamento`,
+      action: () => setStatusFilter('pending'),
+    },
+    {
+      label: 'Em atraso',
+      value: formatCurrency(totals.overdueTotal),
+      description: `${overdueInstallments.length} parcela(s) vencida(s)`,
+      action: () => setStatusFilter('overdue'),
+    },
+    {
+      label: 'Recebido este mês',
+      value: formatCurrency(totals.paidTotalMonth),
+      description: `${paidThisMonth.length} parcela(s) confirmada(s)`,
+      action: () => setStatusFilter('paid'),
+    },
+  ];
 
   const handleMarkPaid = async (installmentId: number) => {
     const confirm = window.confirm('Confirma o recebimento desta parcela?');
@@ -137,89 +157,71 @@ const Payments: React.FC = () => {
 
   return (
     <div className="space-y-8">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.32em] text-muted-foreground">
-          Financeiro
-        </p>
-        <h1 className="mt-2 text-[26px] font-semibold tracking-tight text-foreground dark:text-dark-foreground">
-          Pagamentos previstos &amp; recebimentos
-        </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Visualize parcelas futuras, identifique atrasos e confirme recebimentos para atualizar o caixa automaticamente.
-        </p>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Card className="border border-emerald-200 bg-emerald-50/80 shadow-sm dark:border-emerald-500/40 dark:bg-emerald-500/15">
-          <CardHeader className="flex items-center justify-between">
-            <CardTitle className="text-xs font-semibold uppercase tracking-[0.3em] text-emerald-600 dark:text-emerald-200">
-              Valores pendentes
-            </CardTitle>
-            <CalendarDays className="h-5 w-5 text-emerald-500" />
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-semibold text-emerald-700 dark:text-emerald-200">
-              {formatCurrency(totals.pendingTotal)}
+      <section className="premium-hero workflow-hero workflow-hero--payments">
+        <div className="premium-hero__overlay" />
+        <div className="premium-hero__content">
+          <div className="premium-hero__main">
+            <span className="premium-badge">Financeiro</span>
+            <h1 className="premium-hero__title">Pagamentos previstos &amp; recebimentos.</h1>
+            <p className="premium-hero__subtitle">
+              Visualize parcelas futuras, identifique atrasos e confirme recebimentos para atualizar o caixa automaticamente.
             </p>
-            <p className="text-xs text-emerald-700/80 dark:text-emerald-200/80">
-              {pendingInstallments.length} parcela(s) aguardando pagamento
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="border border-red-200 bg-red-50/80 shadow-sm dark:border-red-500/40 dark:bg-red-500/15">
-          <CardHeader className="flex items-center justify-between">
-            <CardTitle className="text-xs font-semibold uppercase tracking-[0.3em] text-red-600 dark:text-red-200">
-              Em atraso
-            </CardTitle>
-            <AlertTriangle className="h-5 w-5 text-red-500" />
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-semibold text-red-600 dark:text-red-200">
-              {formatCurrency(totals.overdueTotal)}
-            </p>
-            <p className="text-xs text-red-600/80 dark:text-red-200/80">
-              {overdueInstallments.length} parcela(s) vencida(s)
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="border border-primary/40 bg-primary/5 shadow-sm dark:border-dark-primary/40 dark:bg-dark-primary/10">
-          <CardHeader className="flex items-center justify-between">
-            <CardTitle className="text-xs font-semibold uppercase tracking-[0.3em] text-primary dark:text-dark-primary">
-              Recebido este mês
-            </CardTitle>
-            <CheckCircle2 className="h-5 w-5 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-semibold text-primary dark:text-dark-primary">
-              {formatCurrency(totals.paidTotalMonth)}
-            </p>
-            <p className="text-xs text-primary/80 dark:text-dark-primary/80">
-              {paidThisMonth.length} parcela(s) confirmada(s)
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="border border-indigo-200 bg-indigo-50/80 shadow-sm dark:border-indigo-500/40 dark:bg-indigo-500/15">
-          <CardHeader className="flex items-center justify-between">
-            <CardTitle className="text-xs font-semibold uppercase tracking-[0.3em] text-indigo-600 dark:text-indigo-200">
-              Próximo vencimento
-            </CardTitle>
-            <Clock className="h-5 w-5 text-indigo-500" />
-          </CardHeader>
-          <CardContent>
-            <p className="text-lg font-semibold text-indigo-600 dark:text-indigo-200">
+            <div className="hero-actions hero-actions--compact">
+              <Button className="hero-actions__primary gap-2 rounded-full" onClick={() => setStatusFilter('pending')}>
+                <CalendarDays className="h-4 w-4" />
+                Pendentes
+              </Button>
+              <Button variant="ghost" className="hero-actions__secondary gap-2 rounded-full" onClick={() => setStatusFilter('overdue')}>
+                <AlertTriangle className="h-4 w-4" />
+                Em atraso
+              </Button>
+              <Button variant="ghost" className="hero-actions__secondary gap-2 rounded-full" onClick={() => setStatusFilter('paid')}>
+                <CheckCircle2 className="h-4 w-4" />
+                Pagas
+              </Button>
+            </div>
+            <div className="premium-metrics">
+              {heroMetrics.map(metric => (
+                <button key={metric.label} type="button" className="premium-metric-card text-left" onClick={metric.action}>
+                  <p className="premium-metric-card__label">{metric.label}</p>
+                  <p className="premium-metric-card__value">{metric.value}</p>
+                  <p className="premium-metric-card__description">{metric.description}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="hero-sidecard workflow-sidecard">
+            <p className="hero-sidecard__eyebrow">Próximo vencimento</p>
+            <h3 className="hero-sidecard__title">
               {totals.nextDue?.dueDate ? formatDate(totals.nextDue.dueDate) : 'Todos em dia'}
-            </p>
-            <p className="text-xs text-indigo-600/80 dark:text-indigo-200/80">
+            </h3>
+            <p className="hero-sidecard__subtitle">
               {totals.nextDue ? `Cliente: ${totals.nextDue.contactName}` : 'Nenhuma parcela pendente'}
             </p>
-          </CardContent>
-        </Card>
-      </div>
+            <div className="hero-sidecard__grid">
+              <div>
+                <span className="hero-sidecard__label">Pendentes</span>
+                <span className="hero-sidecard__value">{pendingInstallments.length}</span>
+              </div>
+              <div>
+                <span className="hero-sidecard__label">Em atraso</span>
+                <span className="hero-sidecard__value">{overdueInstallments.length}</span>
+              </div>
+              <div>
+                <span className="hero-sidecard__label">Pagas no mês</span>
+                <span className="hero-sidecard__value">{paidThisMonth.length}</span>
+              </div>
+            </div>
+            <div className="hero-sidecard__footer">
+              <Button variant="ghost" className="hero-sidecard__cta" onClick={() => setStatusFilter('pending')}>
+                Revisar cobranças
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
 
-      <Card className="border border-border/60 shadow-sm dark:border-dark-border/60 dark:bg-dark-card/80">
+      <Card className="premium-shell">
         <CardHeader className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <CardTitle className="text-base font-semibold">Lista de parcelas</CardTitle>
@@ -273,7 +275,7 @@ const Payments: React.FC = () => {
               {filteredInstallments.map(installment => (
                 <div
                   key={installment.id}
-                  className="grid gap-3 rounded-lg border border-border/60 bg-card/90 px-4 py-3 text-sm shadow-sm dark:border-dark-border/60 dark:bg-dark-card/70 md:grid-cols-[1.5fr,1fr,1fr,1fr,auto]"
+                  className="grid gap-3 rounded-lg border border-border/30 bg-card/90 px-4 py-3 text-sm shadow-sm dark:border-dark-border/60 dark:bg-dark-card/70 md:grid-cols-[1.5fr,1fr,1fr,1fr,auto]"
                 >
                   <div className="flex flex-col">
                     <Link

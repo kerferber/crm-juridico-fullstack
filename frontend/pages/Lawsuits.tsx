@@ -182,6 +182,28 @@ const Lawsuits: React.FC = () => {
       }))
       .sort((a, b) => b.count - a.count);
   }, [lawsuits]);
+  const heroMetrics = [
+    {
+      label: 'Ativos',
+      value: activeCount,
+      description: 'Processos em andamento',
+    },
+    {
+      label: 'Prazos 7 dias',
+      value: criticalDeadlines,
+      description: `Até ${today.add(7, 'day').format('DD/MM')}`,
+    },
+    {
+      label: 'Fechados (30d)',
+      value: closedCount,
+      description: 'Resultados recentes',
+    },
+    {
+      label: 'Total em carteira',
+      value: lawsuits.length,
+      description: `${archivedCount} arquivados`,
+    },
+  ];
 
   const statusOptions = useMemo(
     () => ['all', ...Array.from(new Set(lawsuits.map(l => l.status)))],
@@ -300,99 +322,81 @@ const Lawsuits: React.FC = () => {
 
   return (
     <div className="space-y-8">
-      <section className="rounded-2xl border border-border/60 bg-white px-5 py-5 shadow-sm dark:border-dark-border/60 dark:bg-dark-card/80">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-muted-foreground">
-              Operações jurídicas
-            </p>
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground dark:text-dark-foreground">
-              Pipeline de processos e prazos críticos
-            </h1>
-            <p className="text-sm text-muted-foreground">
+      <section className="premium-hero workflow-hero workflow-hero--processes">
+        <div className="premium-hero__overlay" />
+        <div className="premium-hero__content">
+          <div className="premium-hero__main">
+            <span className="premium-badge">Operações jurídicas</span>
+            <h1 className="premium-hero__title">Pipeline de processos e prazos críticos.</h1>
+            <p className="premium-hero__subtitle">
               Visualize fases, riscos e direcione tarefas com um clique.
             </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button className="gap-2 rounded-full" onClick={() => openProcessModal()}>
-              <Plus className="h-4 w-4" />
-              Novo processo
-            </Button>
-            <Button
-              variant="outline"
-              className="gap-2 rounded-full"
-              onClick={() => setSelectedStatus('Ativo')}
-            >
-              <Briefcase className="h-4 w-4" />
-              Somente ativos
-            </Button>
-          </div>
-        </div>
-
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {[
-            {
-              title: 'Ativos',
-              value: activeCount,
-              description: 'Processos em andamento',
-              icon: Briefcase,
-              accent: 'text-emerald-600 bg-emerald-50 dark:text-emerald-200 dark:bg-emerald-500/10',
-              action: () => setSelectedStatus('Ativo'),
-            },
-            {
-              title: 'Prazos 7 dias',
-              value: criticalDeadlines,
-              description: 'Com prazo até ' + today.add(7, 'day').format('DD/MM'),
-              icon: CalendarDays,
-              accent: 'text-amber-600 bg-amber-50 dark:text-amber-200 dark:bg-amber-500/10',
-              action: () => setSelectedStatus('Ativo'),
-            },
-            {
-              title: 'Fechados (30 dias)',
-              value: closedCount,
-              description: 'Resultados recentes',
-              icon: Trophy,
-              accent: 'text-primary bg-primary/10 dark:text-dark-primary dark:bg-dark-primary/15',
-              action: () => setSelectedStatus('Fechado'),
-            },
-            {
-              title: 'Total na base',
-              value: lawsuits.length,
-              description: `${archivedCount} arquivados`,
-              icon: Layers,
-              accent: 'text-slate-600 bg-slate-100 dark:text-dark-foreground dark:bg-dark-border/30',
-              action: () => setSelectedStatus('all'),
-            },
-          ].map(card => (
-            <div
-              key={card.title}
-              className="rounded-2xl border border-border/60 bg-surface px-4 py-4 shadow-sm dark:border-dark-border/60 dark:bg-dark-surface/60"
-            >
-              <div className="flex items-center gap-2">
-                <div className={cn('inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold', card.accent)}>
-                  <card.icon className="h-3.5 w-3.5" />
-                  {card.title}
-                </div>
-              </div>
-              <p className="mt-3 text-3xl font-semibold text-foreground dark:text-dark-foreground">
-                {card.value}
-              </p>
-              <p className="text-xs text-muted-foreground">{card.description}</p>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="mt-2 px-0 text-left text-xs font-semibold"
-                onClick={card.action}
-              >
-                Ajustar filtros
+            <div className="hero-actions hero-actions--compact">
+              <Button className="hero-actions__primary gap-2 rounded-full" onClick={() => openProcessModal()}>
+                <Plus className="h-4 w-4" />
+                Novo processo
               </Button>
+              <Button
+                variant="ghost"
+                className="hero-actions__secondary gap-2 rounded-full"
+                onClick={() => setSelectedStatus('Ativo')}
+              >
+                <Briefcase className="h-4 w-4" />
+                Somente ativos
+              </Button>
+              <div className="hero-actions__tools crm-premium__tools">
+                <span>{lawsuits.length} processos</span>
+                <span className="crm-premium__dot" />
+                <span>{criticalDeadlines} prazos críticos</span>
+              </div>
             </div>
-          ))}
+            <div className="premium-metrics">
+              {heroMetrics.map(metric => (
+                <div key={metric.label} className="premium-metric-card">
+                  <p className="premium-metric-card__label">{metric.label}</p>
+                  <p className="premium-metric-card__value">{metric.value}</p>
+                  <p className="premium-metric-card__description">{metric.description}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="hero-sidecard workflow-sidecard">
+            <p className="hero-sidecard__eyebrow">Fases mais ativas</p>
+            <h3 className="hero-sidecard__title">{pipelinePhases[0]?.phase ?? 'Sem fase definida'}</h3>
+            <p className="hero-sidecard__subtitle">
+              {pipelinePhases[0]?.count ?? 0} casos com próximo prazo{' '}
+              {pipelinePhases[0]?.nextDeadline ? formatDate(pipelinePhases[0]?.nextDeadline) : 'indefinido'}.
+            </p>
+            <div className="hero-sidecard__grid">
+              <div>
+                <span className="hero-sidecard__label">Ativos</span>
+                <span className="hero-sidecard__value">{activeCount}</span>
+              </div>
+              <div>
+                <span className="hero-sidecard__label">Fechados</span>
+                <span className="hero-sidecard__value">{closedCount}</span>
+              </div>
+              <div>
+                <span className="hero-sidecard__label">Arquivados</span>
+                <span className="hero-sidecard__value">{archivedCount}</span>
+              </div>
+            </div>
+            <ul className="workflow-sidecard__list">
+              {pipelinePhases.slice(0, 3).map(phase => (
+                <li key={phase.phase}>
+                  <div>
+                    <p>{phase.phase}</p>
+                    <span>{phase.count} caso(s)</span>
+                  </div>
+                  <span>{phase.nextDeadline ? formatDate(phase.nextDeadline) : 'Sem prazo'}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       </section>
 
-      <section className="rounded-2xl border border-border/60 bg-white px-5 py-5 shadow-sm dark:border-dark-border/60 dark:bg-dark-card/80">
+      <section className="premium-panel space-y-4">
         <div className="flex flex-col gap-3">
           <div className="flex flex-wrap items-center gap-2">
             <span className="inline-flex items-center gap-2 rounded-full border border-border/60 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
@@ -420,7 +424,7 @@ const Lawsuits: React.FC = () => {
           {pipelinePhases.map(phase => (
             <div
               key={phase.phase}
-              className="flex flex-col gap-3 rounded-2xl border border-border/60 bg-surface px-4 py-4 shadow-sm dark:border-dark-border/60 dark:bg-dark-surface/60"
+              className="premium-metric-card workflow-phase-card"
             >
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">
@@ -462,7 +466,7 @@ const Lawsuits: React.FC = () => {
         </div>
       </section>
 
-      <section className="rounded-3xl border border-border/60 bg-white/85 p-6 shadow-sm backdrop-blur-xl dark:border-dark-border/60 dark:bg-dark-card/80">
+      <section className="premium-shell bg-white/90 p-6 dark:bg-dark-card/80">
         <header className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h2 className="text-lg font-semibold tracking-tight text-foreground dark:text-dark-foreground">
@@ -571,7 +575,7 @@ const Lawsuits: React.FC = () => {
           </Button>
         </div>
 
-        <div className="mt-8 overflow-hidden rounded-2xl border border-border/60 bg-white dark:border-dark-border/60 dark:bg-dark-card/80">
+        <div className="premium-shell mt-8 overflow-hidden bg-white dark:bg-dark-card/80">
           {actionError && (
             <p className="mx-4 mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-200">
               {actionError}
@@ -749,7 +753,7 @@ const Lawsuits: React.FC = () => {
       </section>
       {pendingDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-6">
-          <div className="w-full max-w-md rounded-2xl border border-border/60 bg-white p-6 shadow-2xl dark:border-dark-border/60 dark:bg-dark-card/90">
+          <div className="w-full max-w-md premium-shell bg-white p-6 shadow-2xl dark:bg-dark-card/90">
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">
